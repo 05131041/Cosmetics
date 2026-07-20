@@ -310,21 +310,7 @@
                         點選左側下方儲存的化妝品卡片，一鍵即時上妝試色
                     </div>
                 </div>
-
-                <!-- 手機版指南折疊 -->
-                <details class="bg-white rounded-2xl border border-[#DFD9CD] p-3 shadow-sm text-xs group cursor-pointer">
-                    <summary class="font-medium text-[#7A8275] flex justify-between items-center select-none">
-                        <span>📱 上傳 GitHub 部署後的連線設定指南</span>
-                        <span class="text-[10px] text-gray-400 group-open:rotate-180 transition-transform">▼</span>
-                    </summary>
-                    <div class="mt-3 space-y-2 text-[#7A8275]/90 border-t border-[#F0EAE1] pt-3">
-                        <p class="font-semibold text-amber-600">⚠ 手機無法新增或同步資料？請前往 Firebase 設定：</p>
-                        <ol class="list-decimal pl-4 space-y-1 text-[11px]">
-                            <li><strong>新增授權網域：</strong> 到 Firebase Console ➡ Authentication ➡ Settings ➡ Authorized domains ➡ 新增您的 GitHub Pages 根網域（例如：<code>您的帳號.github.io</code>）。</li>
-                            <li><strong>放開資料庫讀寫權限：</strong> 到 Firestore Database ➡ Rules，改為 <code>allow read, write: if request.auth != null;</code>。</li>
-                        </ol>
-                    </div>
-                </details>
+                
             </div>
 
         </div>
