@@ -3,390 +3,891 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>是多愛喝 2026</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>化妝品紀錄與模擬器</title>
+    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- 引入 Google Fonts - Inter & Playfair Display (兼顧質感與易讀) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans TC', sans-serif; }
-        .dreamy-gradient {
-            background: linear-gradient(135deg, #FDFBFD 0%, #F8F2FC 100%);
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #F9F6F0; /* 暖米色溫和底色 */
         }
-        @keyframes float {
-            0% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(5deg); }
-            100% { transform: translateY(0px) rotate(0deg); }
+        .serif-title {
+            font-family: 'Playfair Display', "Georgia", serif;
         }
-        .float-element { animation: float 8s ease-in-out infinite; }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+        /* 美化滾動條 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
         }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #E2F0FB; border-radius: 10px; }
-        
-        .btn-hover-sparkle:hover {
-            box-shadow: 0 0 15px rgba(253, 226, 228, 0.8);
-            transform: scale(1.02);
+        ::-webkit-scrollbar-track {
+            background: #F0EAE1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #C4BCB1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #A39B8F;
         }
     </style>
 </head>
-<body class="dreamy-gradient min-h-screen text-[#94849A]">
-    <div id="root"></div>
+<body class="text-[#3D403A] min-h-screen flex flex-col transition-colors duration-300">
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+    <!-- 頂部精簡導航欄 -->
+    <header class="sticky top-0 z-50 bg-[#F9F6F0]/90 backdrop-blur-md border-b border-[#DFD9CD] px-4 py-3">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <!-- 鼠尾草綠圓點裝飾 -->
+                <span class="w-3 h-3 rounded-full bg-[#7A8275] animate-pulse"></span>
+                <h1 class="text-lg font-semibold text-[#4E534A] tracking-wide">化妝品紀錄 • 模擬器</h1>
+            </div>
+            <!-- Firebase 狀態標記 -->
+            <div class="flex items-center space-x-1.5 bg-[#8F978A]/10 px-2.5 py-1 rounded-full text-[11px] text-[#7A8275]">
+                <span id="db-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span id="db-status-text">初始化中</span>
+            </div>
+        </div>
+    </header>
 
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : { apiKey: "AIzaSyCFnYhdOMJNAxCnVoUDxDtAItKQjURd14w", authDomain: "drinks-4eb2c.firebaseapp.com", projectId: "drinks-4eb2c", storageBucket: "drinks-4eb2c.firebasestorage.app", messagingSenderId: "394916838880", appId: "1:394916838880:web:ebe01d2df44542f0347f85" };
+    <!-- 主要響應式佈局 -->
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-6">
+        
+        <!-- 手機優先：在小螢幕是 1 欄，在 md(768px) 以上是 2 欄 (左側登錄+列表，右側試妝鏡) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- 左側/中側：表單與卡片列表 (佔 7 欄) -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- 新增化妝品表單卡片 -->
+                <div class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-5 transition-all">
+                    <h2 class="text-sm font-medium text-[#4E534A] border-b border-[#F0EAE1] pb-3 mb-4 flex items-center">
+                        <svg class="w-4 h-4 mr-1.5 text-[#7A8275]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                        登記彩妝
+                    </h2>
+                    
+                    <form id="cosmetic-form" onsubmit="event.preventDefault();" class="space-y-4">
+                        <!-- 產品名稱 -->
+                        <div>
+                            <label class="block text-xs font-medium text-[#7A8275] mb-1">產品名稱 <span class="text-rose-400">*</span></label>
+                            <input type="text" id="itemName" required placeholder="如：水光保濕唇膏" 
+                                   class="w-full text-sm px-3 py-2 bg-[#F9F6F0] border border-[#DFD9CD] rounded-xl focus:outline-none focus:ring-1 focus:ring-[#7A8275] focus:border-[#7A8275]">
+                        </div>
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'drink-tracker-2026';
-
-        window.FB = { db, auth, appId, doc, setDoc, onSnapshot, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
-    </script>
-
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-
-        // 可愛的主圖示：珍奶
-        const IconBoba = ({className}) => (
-            <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 14L22 52C22 55.3137 24.6863 58 28 58H36C39.3137 58 42 55.3137 42 52L46 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M16 14H48" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M40 6L36 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-                <circle cx="28" cy="48" r="2.5" fill="currentColor"/>
-                <circle cx="36" cy="46" r="2.5" fill="currentColor"/>
-                <circle cx="32" cy="52" r="2.5" fill="currentColor"/>
-                <circle cx="26" cy="42" r="2.5" fill="currentColor"/>
-                <circle cx="38" cy="40" r="2.5" fill="currentColor"/>
-                <path d="M22 28C22 28 26 30 32 30C38 30 42 28 42 28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3"/>
-            </svg>
-        );
-
-        // 隨機小圖示庫
-        const RandomIcons = [
-            // 冰淇淋
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 11c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.1-.4 2.1-1 3H8c-.6-.9-1-1.9-1-3zM12 14v7M9 14l3 7 3-7" /></svg>,
-            // 咖啡杯
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 8h1a4 4 0 110 8h-1M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8zM6 2v2M10 2v2M14 2v2" /></svg>,
-            // 櫻桃
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="7" cy="18" r="4"/><circle cx="17" cy="18" r="4"/><path d="M9 14.5c0-4 3.5-7.5 7.5-7.5M17 14.5V2" /></svg>,
-            // 甜甜圈
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>,
-            // 熱飲
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM14 2c0 1-1 1-1 2s1 1 1 2M10 2c0 1-1 1-1 2s1 1 1 2M6 2c0 1-1 1-1 2s1 1 1 2" /></svg>,
-            // 蘇打
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 22h10V5H7v17zM12 5V2M15 2h-6M10 10c0-1 1-1 1-2M13 14c0-1 1-1 1-2" /></svg>
-        ];
-
-        const IconHeart = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>;
-        const IconStar = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>;
-
-        const ICE_OPTIONS = ['正常冰', '少冰', '微冰', '去冰', '常溫', '溫'];
-        const SUGAR_OPTIONS = ['無法調整', '半糖', '微糖', '一分糖', '無糖'];
-
-        function App() {
-            const [user, setUser] = useState(null);
-            const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1));
-            const [records, setRecords] = useState({});
-            const [selectedDate, setSelectedDate] = useState(null);
-            const [isModalOpen, setIsModalOpen] = useState(false);
-
-            useEffect(() => {
-                const checkFB = setInterval(() => {
-                    if (window.FB) {
-                        clearInterval(checkFB);
-                        const { auth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } = window.FB;
-                        const initAuth = async () => {
-                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                await signInWithCustomToken(auth, __initial_auth_token);
-                            } else {
-                                await signInAnonymously(auth);
-                            }
-                        };
-                        initAuth();
-                        onAuthStateChanged(auth, setUser);
-                    }
-                }, 100);
-            }, []);
-
-            useEffect(() => {
-                if (!user || !window.FB) return;
-                const { db, appId, doc, onSnapshot } = window.FB;
-                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
-                const unsub = onSnapshot(docRef, (snap) => {
-                    if (snap.exists()) setRecords(snap.data().records || {});
-                }, (err) => console.error("Firestore Error:", err));
-                return () => unsub();
-            }, [user]);
-
-            const saveToCloud = async (newRecords) => {
-                if (!user || !window.FB) return;
-                const { db, appId, doc, setDoc } = window.FB;
-                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
-                await setDoc(docRef, { records: newRecords });
-            };
-
-            const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-            const changeMonth = (offset) => {
-                const nextDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1);
-                setCurrentMonth(nextDate);
-            };
-
-            const monthlyStats = useMemo(() => {
-                const year = currentMonth.getFullYear();
-                const month = currentMonth.getMonth() + 1;
-                const prefix = `${year}-${String(month).padStart(2, '0')}`;
-                let cups = 0, cost = 0;
-                const shops = {};
-                Object.keys(records).forEach(d => {
-                    if (d.startsWith(prefix)) {
-                        records[d].forEach(r => {
-                            cups++;
-                            cost += Number(r.price) || 0;
-                            if (r.shopName) shops[r.shopName] = (shops[r.shopName] || 0) + 1;
-                        });
-                    }
-                });
-                const fav = Object.entries(shops).sort((a,b) => b[1]-a[1])[0]?.[0] || '無紀錄';
-                return { cups, cost, fav };
-            }, [records, currentMonth]);
-
-            const handleSave = (dateStr, drinks) => {
-                let updated = { ...records, [dateStr]: drinks };
-                drinks.forEach(d => {
-                    if (d.continueTomorrow) {
-                        const next = new Date(dateStr);
-                        next.setDate(next.getDate() + 1);
-                        const nStr = formatDate(next);
-                        if (next.getFullYear() === 2026) {
-                            const nDrinks = updated[nStr] ? [...updated[nStr]] : [];
-                            const isDup = nDrinks.some(x => x.shopName === d.shopName && x.itemName === d.itemName);
-                            if (!isDup && nDrinks.length < 3) {
-                                nDrinks.push({ ...d, price: '', continueTomorrow: false });
-                                updated[nStr] = nDrinks;
-                            }
-                        }
-                    }
-                });
-                setRecords(updated);
-                saveToCloud(updated);
-                setIsModalOpen(false);
-            };
-
-            const calendarDays = useMemo(() => {
-                const year = currentMonth.getFullYear();
-                const month = currentMonth.getMonth();
-                const first = new Date(year, month, 1).getDay();
-                const total = new Date(year, month + 1, 0).getDate();
-                const days = [];
-                for (let i = 0; i < first; i++) days.push(null);
-                for (let d = 1; d <= total; d++) days.push(new Date(year, month, d));
-                return days;
-            }, [currentMonth]);
-
-            return (
-                <div className="max-w-4xl mx-auto p-4 py-8 relative">
-                    <div className="fixed top-10 left-10 float-element opacity-20 pointer-events-none"><IconStar className="w-20 h-20 text-[#FFF9E6]" fill="#FFF9E6" /></div>
-                    <div className="fixed bottom-20 right-10 float-element opacity-20 pointer-events-none" style={{animationDelay: '1s'}}><IconHeart className="w-24 h-24 text-[#FDE2E4]" fill="#FDE2E4" /></div>
-
-                    <div className="glass-panel rounded-[50px] shadow-2xl overflow-hidden border-[10px] border-white/60">
-                        {/* Header */}
-                        <div className="p-8 md:p-12 flex flex-col md:flex-row justify-between items-center gap-6">
-                            <div className="flex flex-col items-center md:items-start group">
-                                <h1 className="text-4xl font-black text-[#B2A4B8] flex items-center gap-4 tracking-tighter italic">
-                                    <IconBoba className="w-14 h-14 text-[#D1C4D4] group-hover:scale-110 transition-transform duration-500" /> 是有多愛喝
-                                </h1>
-                                <p className="text-[10px] font-black text-[#D1C4D4] tracking-[0.3em] ml-2 mt-1">2026 DRINK TRACKER</p>
-                            </div>
-                            
-                            <div className="flex items-center gap-8 bg-white/50 px-8 py-3 rounded-full border border-white/80 shadow-inner">
-                                <button onClick={() => changeMonth(-1)} className="w-10 h-10 flex items-center justify-center hover:scale-125 transition-transform bg-white/40 rounded-full text-[#B2A4B8] font-bold">&lt;</button>
-                                <div className="text-center min-w-[100px]">
-                                    <span className="text-2xl font-black text-[#94849A] block leading-none">{currentMonth.getFullYear()}</span>
-                                    <span className="text-sm font-bold text-[#B2A4B8]">{currentMonth.getMonth() + 1}月</span>
-                                </div>
-                                <button onClick={() => changeMonth(1)} className="w-10 h-10 flex items-center justify-center hover:scale-125 transition-transform bg-white/40 rounded-full text-[#B2A4B8] font-bold">&gt;</button>
+                        <!-- 產品類別 (可多選) -->
+                        <div>
+                            <label class="block text-xs font-medium text-[#7A8275] mb-1.5">產品類別 (可多選) <span class="text-rose-400">*</span></label>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="flex items-center space-x-1.5 bg-[#F9F6F0] border border-[#DFD9CD] px-3 py-1.5 rounded-xl cursor-pointer select-none text-xs hover:bg-[#F0EAE1] transition">
+                                    <input type="checkbox" name="categories" value="lip" class="rounded text-[#7A8275] focus:ring-[#7A8275]">
+                                    <span>唇膏 / 唇釉</span>
+                                </label>
+                                <label class="flex items-center space-x-1.5 bg-[#F9F6F0] border border-[#DFD9CD] px-3 py-1.5 rounded-xl cursor-pointer select-none text-xs hover:bg-[#F0EAE1] transition">
+                                    <input type="checkbox" name="categories" value="cheek" class="rounded text-[#7A8275] focus:ring-[#7A8275]">
+                                    <span>腮紅 / 頰彩</span>
+                                </label>
+                                <label class="flex items-center space-x-1.5 bg-[#F9F6F0] border border-[#DFD9CD] px-3 py-1.5 rounded-xl cursor-pointer select-none text-xs hover:bg-[#F0EAE1] transition">
+                                    <input type="checkbox" name="categories" value="eyeshadow" class="rounded text-[#7A8275] focus:ring-[#7A8275]">
+                                    <span>眼影 / 眼部</span>
+                                </label>
+                                <label class="flex items-center space-x-1.5 bg-[#F9F6F0] border border-[#DFD9CD] px-3 py-1.5 rounded-xl cursor-pointer select-none text-xs hover:bg-[#F0EAE1] transition">
+                                    <input type="checkbox" name="categories" value="other" class="rounded text-[#7A8275] focus:ring-[#7A8275]">
+                                    <span>打亮 / 其他</span>
+                                </label>
                             </div>
                         </div>
 
-                        {/* Stats Panel */}
-                        <div className="px-10 grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-                            <div className="bg-[#FDE2E4]/25 p-5 rounded-[35px] border border-[#FDE2E4]/40 flex flex-col items-center justify-center">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[#C19EA3] mb-1">Monthly Total</p>
-                                <p className="text-3xl font-black text-[#E5A7AF]">{monthlyStats.cups} 杯</p>
+                        <!-- 品牌 + 色號 (雙欄) -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-[#7A8275] mb-1">品牌</label>
+                                <input type="text" id="itemBrand" placeholder="如：CHANEL" 
+                                       class="w-full text-sm px-3 py-2 bg-[#F9F6F0] border border-[#DFD9CD] rounded-xl focus:outline-none focus:ring-1 focus:ring-[#7A8275]">
                             </div>
-                            <div className="bg-[#F3E5F5]/25 p-5 rounded-[35px] border border-[#F3E5F5]/40 flex flex-col items-center justify-center">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[#A696AF] mb-1">Expense</p>
-                                <p className="text-3xl font-black text-[#B39DDB]">${monthlyStats.cost}</p>
-                            </div>
-                            <div className="bg-[#FDFBF2]/40 p-5 rounded-[35px] border border-[#FFF9E6]/40 flex flex-col items-center justify-center">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[#B8B89F] mb-1">Favorite Shop</p>
-                                <p className="text-sm font-black text-[#A3A38E] truncate max-w-full text-center">{monthlyStats.fav}</p>
+                            <div>
+                                <label class="block text-xs font-medium text-[#7A8275] mb-1">色號</label>
+                                <input type="text" id="itemCode" placeholder="如：#118" 
+                                       class="w-full text-sm px-3 py-2 bg-[#F9F6F0] border border-[#DFD9CD] rounded-xl focus:outline-none focus:ring-1 focus:ring-[#7A8275]">
                             </div>
                         </div>
 
-                        {/* Calendar Grid */}
-                        <div className="p-10 pt-0 grid grid-cols-7 gap-3">
-                            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => <div key={d} className="text-center text-[9px] font-black text-[#D1C4D4] tracking-widest pb-3">{d}</div>)}
-                            {calendarDays.map((d, i) => {
-                                if (!d) return <div key={`e-${i}`} className="h-28" />;
-                                const s = formatDate(d);
-                                const rs = records[s] || [];
-                                
-                                let bgClass = 'bg-white/40';
-                                if (rs.length === 1) bgClass = 'bg-[#FDE2E4]/20';
-                                else if (rs.length === 2) bgClass = 'bg-[#FDE2E4]/40';
-                                else if (rs.length >= 3) bgClass = 'bg-[#F8BBD0]/30';
+                        <!-- 色調類型 + 質地 (雙欄) -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-[#7A8275] mb-1">色調類型</label>
+                                <input type="text" id="itemTone" placeholder="如：奶茶棕、玫瑰粉" 
+                                       class="w-full text-sm px-3 py-2 bg-[#F9F6F0] border border-[#DFD9CD] rounded-xl focus:outline-none focus:ring-1 focus:ring-[#7A8275]">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-[#7A8275] mb-1">質地</label>
+                                <select id="itemTexture" class="w-full text-sm px-3 py-2 bg-[#F9F6F0] border border-[#DFD9CD] rounded-xl focus:outline-none focus:ring-1 focus:ring-[#7A8275]">
+                                    <option value="啞光霧面">啞光霧面</option>
+                                    <option value="水光玻璃">水光玻璃</option>
+                                    <option value="絲絨緞光">絲絨緞光</option>
+                                    <option value="金屬閃爍">金屬金鑽</option>
+                                    <option value="輕薄日常">柔霧輕透</option>
+                                </select>
+                            </div>
+                        </div>
 
-                                return (
-                                    <button 
-                                        key={s} 
-                                        onClick={() => { setSelectedDate(d); setIsModalOpen(true); }} 
-                                        className={`h-28 rounded-[35px] border-2 border-white/40 flex flex-col p-3 transition-all hover:scale-105 hover:bg-white/90 hover:shadow-xl group relative overflow-hidden ${bgClass}`}
-                                    >
-                                        <span className="text-[11px] font-black text-[#B2A4B8] group-hover:text-[#94849A] relative z-10">{d.getDate()}</span>
-                                        <div className="mt-2 space-y-1 w-full relative z-10">
-                                            {rs.map((r, idx) => {
-                                                // 根據日期和索引生成一個確定的隨機數 (用於選擇圖示)
-                                                const iconIndex = (d.getDate() + idx) % RandomIcons.length;
-                                                const IconComponent = RandomIcons[iconIndex];
-                                                return (
-                                                    <div key={idx} className="flex items-center gap-1 text-[8px] bg-white/70 rounded-full px-2 py-0.5 truncate font-bold text-[#94849A] border border-white/60 shadow-sm animate-in slide-in-from-left-2">
-                                                        <IconComponent className="w-2 h-2 text-[#E5A7AF] shrink-0" />
-                                                        <span className="truncate">{r.itemName || '飲品'}</span>
-                                                    </div>
-                                                );
-                                            })}
+                        <!-- 有效期限 -->
+                        <div>
+                            <label class="block text-xs font-medium text-[#7A8275] mb-1">有效期限</label>
+                            <input type="date" id="itemExpiry" 
+                                   class="w-full text-sm px-3 py-2 bg-[#F9F6F0] border border-[#DFD9CD] rounded-xl focus:outline-none focus:ring-1 focus:ring-[#7A8275]">
+                        </div>
+
+                        <!-- 上傳圖片與試色滴管 -->
+                        <div>
+                            <label class="block text-xs font-medium text-[#7A8275] mb-1">上傳試色圖片 (並點擊提取顏色)</label>
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                <!-- 左側：上傳按鈕與預覽 -->
+                                <div class="md:col-span-8">
+                                    <div class="relative group border-2 border-dashed border-[#DFD9CD] rounded-xl bg-[#F9F6F0] hover:border-[#7A8275] transition flex flex-col items-center justify-center p-3 text-center cursor-pointer min-h-[140px]">
+                                        <input type="file" id="image-picker" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                                        <div id="upload-placeholder" class="space-y-1 z-0">
+                                            <svg class="w-6 h-6 mx-auto text-[#7A8275]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"></path></svg>
+                                            <p class="text-[11px] text-[#7A8275] font-medium">點擊上傳 / 相機拍試色照</p>
+                                            <p class="text-[9px] text-[#A39B8F]">上傳後可直接點圖「吸色」</p>
                                         </div>
-                                        {/* 背景裝飾圖示：僅當有紀錄時顯示一個大圖示在右下角 */}
-                                        {rs.length > 0 && (
-                                            <div className="absolute -bottom-1 -right-1 opacity-10 group-hover:opacity-20 transition-opacity">
-                                                {React.createElement(RandomIcons[d.getDate() % RandomIcons.length], { className: "w-10 h-10" })}
-                                            </div>
-                                        )}
-                                    </button>
-                                );
-                            })}
+                                        <!-- 上傳後顯示圖片的 Canvas -->
+                                        <canvas id="eyedropper-canvas" class="hidden max-h-[180px] max-w-full rounded-lg shadow-sm z-20 object-contain"></canvas>
+                                    </div>
+                                </div>
+                                <!-- 右側：目前提取出的顏色 HEX 與預覽 -->
+                                <div class="md:col-span-4 flex flex-row md:flex-col items-center justify-center md:justify-start bg-[#F9F6F0] p-3 rounded-xl border border-[#DFD9CD] gap-3">
+                                    <div class="relative">
+                                        <div id="color-preview" class="w-12 h-12 rounded-full border-2 border-white shadow-md transition-colors bg-[#E17A7A]"></div>
+                                        <input type="color" id="color-wheel-picker" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer rounded-full" value="#E17A7A">
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-[10px] text-[#7A8275] uppercase tracking-wider font-semibold">提取色值</p>
+                                        <input type="text" id="color-hex" value="#E17A7A" class="w-20 text-xs text-center font-mono mt-1 bg-white border border-[#DFD9CD] rounded-md py-0.5 focus:outline-none">
+                                        <p class="text-[8px] text-[#A39B8F] mt-1 hidden md:block">點擊色圓可微調</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 儲存按鈕 -->
+                        <button type="button" onclick="window.submitCosmeticForm()" class="w-full bg-[#7A8275] text-white hover:bg-[#686E64] py-2.5 rounded-xl text-sm font-medium transition shadow-sm hover:shadow active:scale-[0.98]">
+                            存入 / 同步至雲端
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 已登錄卡片列表 -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-medium text-[#4E534A] tracking-wide flex items-center">
+                            <span class="w-1.5 h-3 bg-[#7A8275] rounded-full mr-1.5"></span>
+                            我的化妝品 (<span id="items-count">0</span>)
+                        </h3>
+                        <!-- 篩選器 -->
+                        <div class="flex items-center space-x-1">
+                            <button onclick="window.filterItems('all')" class="category-filter-btn px-2.5 py-1 text-[11px] rounded-lg bg-[#7A8275] text-white transition">全部</button>
+                            <button onclick="window.filterItems('lip')" class="category-filter-btn px-2.5 py-1 text-[11px] rounded-lg bg-white border border-[#DFD9CD] text-[#7A8275] hover:bg-[#F9F6F0] transition">嘴唇</button>
+                            <button onclick="window.filterItems('cheek')" class="category-filter-btn px-2.5 py-1 text-[11px] rounded-lg bg-white border border-[#DFD9CD] text-[#7A8275] hover:bg-[#F9F6F0] transition">腮紅</button>
+                            <button onclick="window.filterItems('eyeshadow')" class="category-filter-btn px-2.5 py-1 text-[11px] rounded-lg bg-white border border-[#DFD9CD] text-[#7A8275] hover:bg-[#F9F6F0] transition">眼影</button>
                         </div>
                     </div>
 
-                    {/* Editor Modal */}
-                    {isModalOpen && selectedDate && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#F8F2FC]/50 backdrop-blur-xl">
-                            <div className="bg-white/95 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[50px] shadow-3xl p-10 border-[10px] border-white animate-in zoom-in-95 duration-300">
-                                <div className="flex justify-between items-center mb-8">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-[#FAF7FD] p-3 rounded-2xl"><IconBoba className="w-8 h-8 text-[#B2A4B8]" /></div>
-                                        <h2 className="text-3xl font-black text-[#B2A4B8] italic">{formatDate(selectedDate)}</h2>
-                                    </div>
-                                    <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 rounded-full bg-[#FAF7FD] flex items-center justify-center text-[#B2A4B8] hover:bg-[#FDE2E4] hover:text-white transition-colors">?</button>
-                                </div>
-                                <DrinkEditor initialDrinks={records[formatDate(selectedDate)] || []} onSave={(drinks) => handleSave(formatDate(selectedDate), drinks)} />
-                            </div>
-                        </div>
-                    )}
+                    <!-- 列表容器 -->
+                    <div id="cosmetics-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- 動態插入卡片 -->
+                    </div>
                 </div>
-            );
-        }
 
-        function DrinkEditor({ initialDrinks, onSave }) {
-            const [drinks, setDrinks] = useState(initialDrinks);
-            const add = () => drinks.length < 3 && setDrinks([...drinks, { shopName: '', itemName: '', price: '', size: '中杯', ice: '正常冰', sugar: '微糖', continueTomorrow: false }]);
-            const up = (i, f, v) => { const n = [...drinks]; n[i][f] = v; setDrinks(n); };
+            </div>
 
-            return (
-                <div className="space-y-8">
-                    {drinks.map((d, i) => (
-                        <div key={i} className="bg-[#FDFBFD] p-8 rounded-[40px] border-2 border-[#F8F2FC] relative shadow-inner">
-                            <button onClick={() => setDrinks(drinks.filter((_, idx) => idx !== i))} className="absolute -top-3 -right-3 w-10 h-10 bg-white border-2 border-[#F8F2FC] rounded-full flex items-center justify-center text-[#D1C4D4] hover:text-red-300 transition-colors shadow-sm font-bold">?</button>
-                            
-                            <div className="grid grid-cols-2 gap-5 mb-5">
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Shop</p>
-                                    <input className="w-full p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold placeholder-[#D1C4D4] focus:ring-2 ring-[#E2F0FB]/50" placeholder="店家名稱" value={d.shopName} onChange={e => up(i, 'shopName', e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Item</p>
-                                    <input className="w-full p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold placeholder-[#D1C4D4] focus:ring-2 ring-[#E2F0FB]/50" placeholder="想喝什麼？" value={d.itemName} onChange={e => up(i, 'itemName', e.target.value)} />
-                                </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-5 mb-5">
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Price</p>
-                                    <input type="number" className="w-full p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold" placeholder="NT$" value={d.price} onChange={e => up(i, 'price', e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Size</p>
-                                    <div className="flex gap-2">
-                                        {['中杯', '大杯'].map(s => (
-                                            <button key={s} onClick={() => up(i, 'size', s)} className={`flex-1 py-4 rounded-2xl text-xs font-black transition-all ${d.size === s ? 'bg-[#E2F0FB] text-[#7895B2] shadow-sm' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{s}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="mb-5 space-y-2">
-                                <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Ice Level</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {ICE_OPTIONS.map(o => (
-                                        <button key={o} onClick={() => up(i, 'ice', o)} className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all ${d.ice === o ? 'bg-[#E2F0FB] text-[#7895B2] border-[#E2F0FB]' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{o}</button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="mb-6 space-y-2">
-                                <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Sugar Level</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {SUGAR_OPTIONS.map(o => (
-                                        <button key={o} onClick={() => up(i, 'sugar', o)} className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all ${d.sugar === o ? 'bg-[#F3E5F5] text-[#A696AF] border-[#F3E5F5]' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{o}</button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <label className="flex items-center gap-3 cursor-pointer p-4 bg-white rounded-2xl border border-[#F8F2FC] group">
-                                <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${d.continueTomorrow ? 'bg-[#FDE2E4] border-[#FDE2E4]' : 'bg-white border-[#F8F2FC]'}`}>
-                                    {d.continueTomorrow && <IconHeart fill="white" className="w-4 h-4 text-white" />}
-                                </div>
-                                <input type="checkbox" className="hidden" checked={d.continueTomorrow} onChange={e => up(i, 'continueTomorrow', e.target.checked)} /> 
-                                <span className="text-xs font-black text-[#B2A4B8] group-hover:text-[#FDE2E4]">明天繼續喝</span>
-                            </label>
-                        </div>
-                    ))}
-
-                    {drinks.length < 3 && (
-                        <button onClick={add} className="w-full py-8 border-4 border-dashed border-[#F8F2FC] rounded-[40px] text-[#D1C4D4] font-black hover:bg-[#FAF7FD] hover:text-[#B2A4B8] transition-all flex flex-col items-center gap-2">
-                            <span className="text-3xl">＋</span>
-                            <span className="text-[10px] tracking-widest uppercase">Add Another Cup</span>
+            <!-- 右側：仿真人臉試妝鏡 (佔 5 欄) -->
+            <div class="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
+                <div class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-4 text-center">
+                    <div class="flex items-center justify-between mb-3 border-b border-[#F0EAE1] pb-2">
+                        <h2 class="text-xs font-semibold text-[#4E534A] flex items-center">
+                            <svg class="w-4 h-4 mr-1 text-[#7A8275]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            模擬試妝
+                        </h2>
+                        <!-- 重置妝容 -->
+                        <button onclick="window.clearMakeup()" class="text-[10px] text-rose-500 hover:underline flex items-center">
+                            清空妝容
                         </button>
-                    )}
+                    </div>
 
-                    <button 
-                        onClick={() => onSave(drinks)} 
-                        className="w-full py-5 bg-[#FDE2E4] text-[#C19EA3] rounded-[25px] font-black text-lg shadow-xl shadow-[#FDE2E4]/40 btn-hover-sparkle transition-all active:scale-95"
-                    >
-                        儲存
-                    </button>
+                    <!-- SVG 向量人臉 -->
+                    <div class="relative bg-[#F9F6F0]/50 rounded-2xl py-6 flex justify-center items-center overflow-hidden border border-[#F0EAE1]">
+                        
+                        <!-- 向量仿真面部 SVG -->
+                        <svg id="face-mirror" class="w-60 h-60 max-w-full drop-shadow-md" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <!-- 羽化濾鏡：使腮紅和眼影呈現極自然的煙燻暈染效果 -->
+                                <filter id="blush-blur" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feGaussianBlur stdDeviation="8" />
+                                </filter>
+                                <filter id="eyeshadow-blur" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feGaussianBlur stdDeviation="4.5" />
+                                </filter>
+                            </defs>
+
+                            <!-- 脖子與下巴輪廓 -->
+                            <path d="M75,150 L75,190 C75,190 100,200 125,190 L125,150 Z" fill="#FCE9DB" />
+                            <path d="M70,165 C85,178 115,178 130,165" fill="none" stroke="#E6C6B0" stroke-width="2" stroke-linecap="round"/>
+
+                            <!-- 臉部基底 -->
+                            <path d="M55,80 C50,135 68,168 100,168 C132,168 150,135 145,80 C140,40 128,30 100,30 C72,30 60,40 55,80 Z" fill="#FDF3EB" stroke="#F3DEC2" stroke-width="0.5" />
+
+                            <!-- 雙耳 -->
+                            <ellipse cx="51" cy="95" rx="5" ry="9" fill="#FCE9DB" />
+                            <ellipse cx="149" cy="95" rx="5" ry="9" fill="#FCE9DB" />
+
+                            <!-- 溫柔莫蘭迪髮型 (極簡線條) -->
+                            <path d="M54,80 C50,55 70,25 100,25 C130,25 150,55 146,80 C144,70 140,50 125,40 C110,32 90,32 75,40 C60,50 56,70 54,80 Z" fill="#696D65" />
+
+                            <!-- 眉毛 -->
+                            <path d="M72,68 C78,63 84,63 90,66" fill="none" stroke="#555A51" stroke-width="1.8" stroke-linecap="round" />
+                            <path d="M128,68 C122,63 116,63 110,66" fill="none" stroke="#555A51" stroke-width="1.8" stroke-linecap="round" />
+
+                            <!-- 眼睫與眼部輪廓 -->
+                            <path d="M74,77 C78,74 84,74 88,77" fill="none" stroke="#4E534A" stroke-width="1.5" stroke-linecap="round" />
+                            <path d="M126,77 C122,74 116,74 112,77" fill="none" stroke="#4E534A" stroke-width="1.5" stroke-linecap="round" />
+                            <!-- 雙眼 (閉眼微笑型，最適合不干擾色彩表現) -->
+                            <path d="M75,79 C78,81 84,81 87,79" fill="none" stroke="#4E534A" stroke-width="1" stroke-linecap="round" />
+                            <path d="M125,79 C122,81 116,81 113,79" fill="none" stroke="#4E534A" stroke-width="1" stroke-linecap="round" />
+
+                            <!-- 挺直精緻的鼻子 -->
+                            <path d="M100,75 L100,116 C100,118 97,120 96,120 C95,120 94,119 94,118" fill="none" stroke="#E6C6B0" stroke-width="1.5" stroke-linecap="round" />
+
+                            <!-- ================= 實時渲染妝容圖層 ================= -->
+                            
+                            <!-- 1. 眼影圖層 (套用 blur 濾鏡) -->
+                            <path id="makeup-eyeshadow-l" d="M 68,75 C 75,64 85,64 92,75 Z" fill="none" opacity="0" filter="url(#eyeshadow-blur)" class="transition-all duration-300" />
+                            <path id="makeup-eyeshadow-r" d="M 132,75 C 125,64 115,64 108,75 Z" fill="none" opacity="0" filter="url(#eyeshadow-blur)" class="transition-all duration-300" />
+
+                            <!-- 2. 腮紅圖層 (左/右頰，大面積羽化) -->
+                            <circle id="makeup-blush-l" cx="72" cy="116" r="14" fill="none" opacity="0" filter="url(#blush-blur)" class="transition-all duration-300" />
+                            <circle id="makeup-blush-r" cx="128" cy="116" r="14" fill="none" opacity="0" filter="url(#blush-blur)" class="transition-all duration-300" />
+
+                            <!-- 3. 嘴唇圖層 (包含上唇與下唇線條) -->
+                            <path id="makeup-lip" d="M 86,136 C 92,131 96,133 100,135 C 104,133 108,131 114,136 C 109,144 91,144 86,136 Z" fill="none" opacity="0" class="transition-all duration-300" />
+                            <!-- 嘴唇高光：模擬水光/偏光玻璃效果 -->
+                            <ellipse id="makeup-lip-gloss" cx="100" cy="138" rx="8" ry="1.5" fill="#FFFFFF" opacity="0" class="transition-all duration-300 pointer-events-none" />
+                        </svg>
+
+                        <!-- 現正試妝中浮動狀態 -->
+                        <div id="trial-active-badge" class="hidden absolute top-2 right-2 bg-[#7A8275] text-white text-[9px] px-2 py-0.5 rounded-full font-mono shadow-sm">
+                            TRIALING
+                        </div>
+                    </div>
+
+                    <!-- 試妝微調面板 -->
+                    <div class="mt-4 space-y-3 text-left bg-[#F9F6F0] p-3 rounded-xl border border-[#F0EAE1]">
+                        <h4 class="text-[11px] font-semibold text-[#7A8275] uppercase tracking-wider">妝效微調選項</h4>
+                        
+                        <!-- 顯色強度 -->
+                        <div>
+                            <div class="flex justify-between text-[11px] text-[#7A8275] mb-1">
+                                <span>顯色強度 (濃度)</span>
+                                <span id="opacity-val">65%</span>
+                            </div>
+                            <input type="range" id="slider-opacity" min="10" max="100" value="65" 
+                                   class="w-full accent-[#7A8275] bg-[#DFD9CD] h-1 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- 嘴唇光澤度 -->
+                        <div>
+                            <div class="flex justify-between text-[11px] text-[#7A8275] mb-1">
+                                <span>水光玻璃光澤 (僅限唇部)</span>
+                                <span id="gloss-val">關閉</span>
+                            </div>
+                            <input type="range" id="slider-gloss" min="0" max="100" value="0" 
+                                   class="w-full accent-[#7A8275] bg-[#DFD9CD] h-1 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+
+                    <!-- 目前顯示試妝訊息 -->
+                    <div id="makeup-info-box" class="mt-3 text-center text-xs text-[#7A8275]/80 bg-white border border-[#DFD9CD] py-2 px-3 rounded-lg min-h-[40px] flex items-center justify-center">
+                        點選左側下方儲存的化妝品卡片，一鍵即時上妝試色
+                    </div>
                 </div>
-            );
+
+                <!-- 手機版指南折疊 -->
+                <details class="bg-white rounded-2xl border border-[#DFD9CD] p-3 shadow-sm text-xs group cursor-pointer">
+                    <summary class="font-medium text-[#7A8275] flex justify-between items-center select-none">
+                        <span>📱 上傳 GitHub 部署後的連線設定指南</span>
+                        <span class="text-[10px] text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div class="mt-3 space-y-2 text-[#7A8275]/90 border-t border-[#F0EAE1] pt-3">
+                        <p class="font-semibold text-amber-600">⚠ 手機無法新增或同步資料？請前往 Firebase 設定：</p>
+                        <ol class="list-decimal pl-4 space-y-1 text-[11px]">
+                            <li><strong>新增授權網域：</strong> 到 Firebase Console ➡ Authentication ➡ Settings ➡ Authorized domains ➡ 新增您的 GitHub Pages 根網域（例如：<code>您的帳號.github.io</code>）。</li>
+                            <li><strong>放開資料庫讀寫權限：</strong> 到 Firestore Database ➡ Rules，改為 <code>allow read, write: if request.auth != null;</code>。</li>
+                        </ol>
+                    </div>
+                </details>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 全域通知訊息容器 -->
+    <div id="toast-manager" class="fixed top-20 right-4 z-[9999] pointer-events-none flex flex-col space-y-2 max-w-sm w-[280px]"></div>
+
+    <!-- 頁腳 -->
+    <footer class="bg-white border-t border-[#DFD9CD] py-6 mt-12 text-center text-[10px] text-[#7A8275]">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="footer-note mt-3 text-[10px] text-[#7A8275]/50">
+                &copy; 2026 Eee
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript 業務邏輯與 Firebase SDK -->
+    <script type="module">
+        // 導入 Firebase 12.16.0 最新版模組
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+
+        // Firebase 應用配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyB4JBwH7qYJy7JiKkbw0FpX9XBl9UtKTjg",
+            authDomain: "cosmetics-27be7.firebaseapp.com",
+            projectId: "cosmetics-27be7",
+            storageBucket: "cosmetics-27be7.firebasestorage.app",
+            messagingSenderId: "384419679166",
+            appId: "1:384419679166:web:8b6ce90032d04d6e2fc7ef"
+        };
+
+        // 初始化 Firebase
+        let db = null;
+        let auth = null;
+        let localData = []; // 如果雲端尚未設定好，提供本地備份快取，防止網頁破裂
+        let activeFilter = 'all';
+
+        // 即時本地暫存，便於離線及調用
+        let currentUploadedImageBase64 = ''; 
+
+        // 初始化狀態與連線
+        window.addEventListener('load', () => {
+            initAppServices();
+            setupInteractiveCanvas();
+            setupSliders();
+            loadLocalCache();
+        });
+
+        // 初始化 Firebase 雲端與匿名登入
+        async function initAppServices() {
+            const statusDot = document.getElementById('db-status-dot');
+            const statusText = document.getElementById('db-status-text');
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // 進行匿名認證
+                await signInAnonymously(auth);
+                
+                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                statusText.innerText = "雲端同步中";
+                
+                // 開始實時監聽 Firestore
+                listenToCosmetics();
+                showToast("已成功連接至 Firestore 雲端資料庫", "success");
+            } catch (error) {
+                console.warn("Firebase 初始化失敗，自動啟用本地快取機制:", error);
+                statusDot.className = "w-2 h-2 rounded-full bg-orange-400";
+                statusText.innerText = "本地儲存模式";
+                
+                // Firestore 無法使用時，啟用 localStorage
+                renderListFromCache();
+            }
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // 圖片上傳與滴管 Canvas 處理
+        function setupInteractiveCanvas() {
+            const imagePicker = document.getElementById('image-picker');
+            const eyedropperCanvas = document.getElementById('eyedropper-canvas');
+            const uploadPlaceholder = document.getElementById('upload-placeholder');
+            const ctx = eyedropperCanvas.getContext('2d');
+
+            const colorPreview = document.getElementById('color-preview');
+            const colorHex = document.getElementById('color-hex');
+            const colorWheel = document.getElementById('color-wheel-picker');
+
+            // 監聽圖片上傳
+            imagePicker.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        // 讓 Canvas 顯示出來並適應比例
+                        eyedropperCanvas.classList.remove('hidden');
+                        uploadPlaceholder.classList.add('hidden');
+
+                        // 設定 Canvas 大小
+                        const maxW = 320;
+                        const scale = maxW / img.width;
+                        eyedropperCanvas.width = maxW;
+                        eyedropperCanvas.height = img.height * scale;
+
+                        // 渲染到 Canvas 上
+                        ctx.drawImage(img, 0, 0, eyedropperCanvas.width, eyedropperCanvas.height);
+
+                        // 儲存為 Base64（便於上傳 Firestore 或本地存儲，小圖壓縮）
+                        compressAndStoreImage(img);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // 壓縮圖片 Base64，避免超過 Firestore 限制 (縮至 120x120 小縮圖做試色備份)
+            function compressAndStoreImage(originalImg) {
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = 100;
+                tempCanvas.height = 100;
+                tempCtx.drawImage(originalImg, 0, 0, 100, 100);
+                currentUploadedImageBase64 = tempCanvas.toDataURL('image/jpeg', 0.6);
+            }
+
+            // 點擊 Canvas 提取顏色
+            eyedropperCanvas.addEventListener('click', (e) => {
+                const rect = eyedropperCanvas.getBoundingClientRect();
+                // 換算成 canvas 的實際像素坐標
+                const x = (e.clientX - rect.left) * (eyedropperCanvas.width / rect.width);
+                const y = (e.clientY - rect.top) * (eyedropperCanvas.height / rect.height);
+
+                try {
+                    const pixel = ctx.getImageData(x, y, 1, 1).data;
+                    const r = pixel[0];
+                    const g = pixel[1];
+                    const b = pixel[2];
+                    const hex = rgbToHex(r, g, b);
+
+                    // 更新色彩選擇器與預覽
+                    updatePickedColor(hex);
+                    showToast(`吸取顏色：${hex}`, "success");
+                } catch (error) {
+                    console.error("無法提取顏色:", error);
+                    showToast("此圖片受到安全性限制，無法直接點選吸色", "error");
+                }
+            });
+
+            // 連動原生調色盤
+            colorWheel.addEventListener('input', (e) => {
+                updatePickedColor(e.target.value);
+            });
+
+            // 手動輸入 HEX 連動
+            colorHex.addEventListener('input', (e) => {
+                let val = e.target.value;
+                if(val.startsWith('#') && val.length === 7) {
+                    updatePickedColor(val);
+                }
+            });
+
+            function updatePickedColor(hex) {
+                colorPreview.style.backgroundColor = hex;
+                colorHex.value = hex;
+                colorWheel.value = hex;
+            }
+        }
+
+        // 輔助工具：RGB 轉 HEX
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+        }
+
+        // 監聽/拉取 Firestore 彩妝數據
+        function listenToCosmetics() {
+            if (!db) return;
+            const q = query(collection(db, "cosmetics"), orderBy("createdAt", "desc"));
+            
+            onSnapshot(q, (snapshot) => {
+                const items = [];
+                snapshot.forEach((doc) => {
+                    items.push({ id: doc.id, ...doc.data() });
+                });
+                localData = items;
+                // 同步備份到 localStorage 防止突然沒網
+                localStorage.setItem('cosmetics_backup', JSON.stringify(items));
+                renderList();
+            }, (error) => {
+                console.error("Firestore 實時監聽出錯:", error);
+                renderListFromCache();
+            });
+        }
+
+        // 本地快取載入機制
+        function loadLocalCache() {
+            const cached = localStorage.getItem('cosmetics_backup');
+            if (cached) {
+                localData = JSON.parse(cached);
+                renderList();
+            }
+        }
+
+        function renderListFromCache() {
+            loadLocalCache();
+        }
+
+        // 送出表單 (上傳雲端 / 存入本地)
+        window.submitCosmeticForm = async function() {
+            const name = document.getElementById('itemName').value.trim();
+            const brand = document.getElementById('itemBrand').value.trim();
+            const code = document.getElementById('itemCode').value.trim();
+            const tone = document.getElementById('itemTone').value.trim();
+            const texture = document.getElementById('itemTexture').value;
+            const expiry = document.getElementById('itemExpiry').value;
+            const hex = document.getElementById('color-hex').value;
+
+            // 取得多選類別
+            const checkedCategories = [];
+            document.querySelectorAll('input[name="categories"]:checked').forEach(cb => {
+                checkedCategories.push(cb.value);
+            });
+
+            if (!name) {
+                showToast("請填寫產品名稱", "error");
+                return;
+            }
+            if (checkedCategories.length === 0) {
+                showToast("請至少勾選一個產品類別", "error");
+                return;
+            }
+
+            const itemPayload = {
+                name,
+                categories: checkedCategories,
+                brand: brand || "無品牌",
+                code: code || "標準",
+                tone: tone || "未註明",
+                texture,
+                expiry: expiry || "未標記",
+                colorHex: hex,
+                photo: currentUploadedImageBase64 || null,
+                createdAt: new Date().getTime()
+            };
+
+            // 1. 如果雲端可用，上傳到 Firestore
+            if (db) {
+                try {
+                    await addDoc(collection(db, "cosmetics"), itemPayload);
+                    showToast(`已成功登錄「${name}」並同步雲端`, "success");
+                    resetForm();
+                } catch (e) {
+                    console.error("寫入 Firestore 失敗，改用本地:", e);
+                    saveToLocalFallback(itemPayload);
+                }
+            } else {
+                // 2. 否則僅存入本地
+                saveToLocalFallback(itemPayload);
+            }
+        };
+
+        function saveToLocalFallback(payload) {
+            payload.id = 'local_' + Date.now();
+            localData.unshift(payload);
+            localStorage.setItem('cosmetics_backup', JSON.stringify(localData));
+            showToast(`已存入本地儲存「${payload.name}」`, "success");
+            renderList();
+            resetForm();
+        }
+
+        // 刪除化妝品
+        window.deleteCosmeticItem = async function(id) {
+            if (db && !id.startsWith('local_')) {
+                try {
+                    await deleteDoc(doc(db, "cosmetics", id));
+                    showToast("已從雲端化妝盒移除", "success");
+                } catch (e) {
+                    console.error("刪除失敗:", e);
+                    showToast("無法從雲端移除，請確認權限規則", "error");
+                }
+            } else {
+                localData = localData.filter(item => item.id !== id);
+                localStorage.setItem('cosmetics_backup', JSON.stringify(localData));
+                showToast("已從本地移出", "success");
+                renderList();
+            }
+        };
+
+        // 清空表單
+        function resetForm() {
+            document.getElementById('cosmetic-form').reset();
+            currentUploadedImageBase64 = '';
+            document.getElementById('eyedropper-canvas').classList.add('hidden');
+            document.getElementById('upload-placeholder').classList.remove('hidden');
+            // 回復預設綠
+            document.getElementById('color-preview').style.backgroundColor = '#E17A7A';
+            document.getElementById('color-hex').value = '#E17A7A';
+            document.getElementById('color-wheel-picker').value = '#E17A7A';
+        }
+
+        // 篩選功能
+        window.filterItems = function(category) {
+            activeFilter = category;
+            
+            // 標示 active 樣式
+            document.querySelectorAll('.category-filter-btn').forEach(btn => {
+                btn.className = "category-filter-btn px-2.5 py-1 text-[11px] rounded-lg bg-white border border-[#DFD9CD] text-[#7A8275] hover:bg-[#F9F6F0] transition";
+            });
+            event.target.className = "category-filter-btn px-2.5 py-1 text-[11px] rounded-lg bg-[#7A8275] text-white transition";
+
+            renderList();
+        };
+
+        // 渲染卡片列表
+        function renderList() {
+            const container = document.getElementById('cosmetics-list');
+            const countText = document.getElementById('items-count');
+            container.innerHTML = '';
+
+            const filtered = localData.filter(item => {
+                if (activeFilter === 'all') return true;
+                return item.categories && item.categories.includes(activeFilter);
+            });
+
+            countText.innerText = filtered.length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-2 py-8 text-center text-xs text-[#A39B8F] border border-dashed border-[#DFD9CD] rounded-xl">
+                        此分類目前沒有收藏
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white border border-[#DFD9CD] rounded-xl p-3 shadow-sm hover:shadow-md transition duration-300 relative group flex justify-between items-start";
+                
+                // 將分類中文標籤化
+                const catLabels = (item.categories || []).map(cat => {
+                    let text = '彩妝';
+                    let bg = 'bg-gray-100 text-gray-600';
+                    if (cat === 'lip') { text = '唇'; bg = 'bg-rose-50 text-rose-600'; }
+                    if (cat === 'cheek') { text = '頰'; bg = 'bg-orange-50 text-orange-600'; }
+                    if (cat === 'eyeshadow') { text = '眼'; bg = 'bg-amber-50 text-amber-600'; }
+                    if (cat === 'other') { text = '亮'; bg = 'bg-emerald-50 text-emerald-600'; }
+                    return `<span class="px-1.5 py-0.5 rounded-md ${bg} text-[9px] font-semibold">${text}</span>`;
+                }).join(' ');
+
+                // 是否有預覽小圖
+                const imgTag = item.photo 
+                    ? `<img src="${item.photo}" class="w-8 h-8 rounded-lg object-cover border border-[#DFD9CD] shadow-inner flex-shrink-0" alt="色彩相片">`
+                    : `<div class="w-8 h-8 rounded-lg bg-[#F9F6F0] border border-[#DFD9CD] flex items-center justify-center text-[9px] text-[#A39B8F] flex-shrink-0">無圖</div>`;
+
+                card.innerHTML = `
+                    <div class="flex items-start space-x-2.5 max-w-[85%] cursor-pointer" onclick="window.applyMakeupToFace('${item.colorHex}', '${item.categories ? item.categories.join(',') : 'lip'}', '${item.name}', '${item.brand}', '${item.code}')">
+                        <!-- 色彩圓圈與小圖 -->
+                        <div class="flex flex-col items-center space-y-1">
+                            <div class="w-6 h-6 rounded-full border border-white shadow-md flex-shrink-0" style="background-color: ${item.colorHex};"></div>
+                            ${imgTag}
+                        </div>
+                        <!-- 文字資料 -->
+                        <div class="space-y-0.5">
+                            <div class="flex items-center space-x-1 flex-wrap gap-y-1">
+                                <h4 class="text-xs font-bold text-[#4E534A] leading-tight">${item.name}</h4>
+                                <span class="text-[9px] text-[#7A8275] bg-[#F0EAE1] px-1 rounded font-mono">${item.colorHex}</span>
+                            </div>
+                            <p class="text-[10px] text-[#7A8275]">${item.brand} • 色號: ${item.code}</p>
+                            <div class="text-[9px] text-[#A39B8F] flex items-center space-x-1">
+                                <span>質地: ${item.texture || '標準'}</span>
+                                <span>|</span>
+                                <span>效期: ${item.expiry || '--'}</span>
+                            </div>
+                            <div class="pt-1 flex items-center space-x-1">
+                                ${catLabels}
+                                <span class="text-[8px] text-[#7A8275]/60 hover:underline">👉 點擊試妝</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 刪除按鈕 (Hover 顯現) -->
+                    <button onclick="window.deleteCosmeticItem('${item.id}')" class="text-gray-400 hover:text-rose-500 p-1 rounded-full hover:bg-gray-50 transition" title="刪除本項">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ================= 試妝鏡互動邏輯 =================
+        let currentMakeupState = {
+            lip: { color: '', active: false },
+            cheek: { color: '', active: false },
+            eyeshadow: { color: '', active: false }
+        };
+
+        // 點選列表卡片進行「一鍵上妝」
+        window.applyMakeupToFace = function(color, categoryString, name, brand, code) {
+            const categories = categoryString.split(',');
+            const opacity = document.getElementById('slider-opacity').value / 100;
+            const badge = document.getElementById('trial-active-badge');
+            const infoBox = document.getElementById('makeup-info-box');
+
+            badge.classList.remove('hidden');
+
+            categories.forEach(cat => {
+                if (cat === 'lip') {
+                    const lipPath = document.getElementById('makeup-lip');
+                    lipPath.setAttribute('fill', color);
+                    lipPath.setAttribute('opacity', opacity);
+                    currentMakeupState.lip = { color, active: true };
+                    
+                    // 水光高光配合
+                    updateGlossEffect();
+                }
+                if (cat === 'cheek') {
+                    const cheekL = document.getElementById('makeup-blush-l');
+                    const cheekR = document.getElementById('makeup-blush-r');
+                    cheekL.setAttribute('fill', color);
+                    cheekR.setAttribute('fill', color);
+                    // 腮紅需要更柔和，故在滑桿基礎上再降低強度
+                    cheekL.setAttribute('opacity', opacity * 0.7);
+                    cheekR.setAttribute('opacity', opacity * 0.7);
+                    currentMakeupState.cheek = { color, active: true };
+                }
+                if (cat === 'eyeshadow') {
+                    const eyeL = document.getElementById('makeup-eyeshadow-l');
+                    const eyeR = document.getElementById('makeup-eyeshadow-r');
+                    eyeL.setAttribute('fill', color);
+                    eyeR.setAttribute('fill', color);
+                    // 眼影強度
+                    eyeL.setAttribute('opacity', opacity * 0.8);
+                    eyeR.setAttribute('opacity', opacity * 0.8);
+                    currentMakeupState.eyeshadow = { color, active: true };
+                }
+            });
+
+            // 更新下方當前試妝資訊
+            infoBox.innerHTML = `
+                <div class="text-[11px]">
+                    <span class="font-bold text-[#4E534A]">現正試用：</span>
+                    <span class="bg-[#F0EAE1] px-1.5 py-0.5 rounded text-[#7A8275] text-[10px] font-semibold">${brand} • ${name}</span>
+                    <div class="mt-0.5 text-[#A39B8F] text-[9px]">色號：${code} / 試色：<span class="font-mono">${color}</span></div>
+                </div>
+            `;
+            
+            showToast(`已渲染 ${brand}「${name}」於模擬部位`, "success");
+        };
+
+        // 設定滑桿交互
+        function setupSliders() {
+            const sliderOpacity = document.getElementById('slider-opacity');
+            const opacityVal = document.getElementById('opacity-val');
+            
+            const sliderGloss = document.getElementById('slider-gloss');
+            const glossVal = document.getElementById('gloss-val');
+
+            // 濃度滑桿
+            sliderOpacity.addEventListener('input', (e) => {
+                const val = e.target.value;
+                opacityVal.innerText = val + '%';
+                
+                const opacity = val / 100;
+                
+                // 動態調整目前生效部位的透明度
+                if (currentMakeupState.lip.active) {
+                    document.getElementById('makeup-lip').setAttribute('opacity', opacity);
+                }
+                if (currentMakeupState.cheek.active) {
+                    document.getElementById('makeup-blush-l').setAttribute('opacity', opacity * 0.7);
+                    document.getElementById('makeup-blush-r').setAttribute('opacity', opacity * 0.7);
+                }
+                if (currentMakeupState.eyeshadow.active) {
+                    document.getElementById('makeup-eyeshadow-l').setAttribute('opacity', opacity * 0.8);
+                    document.getElementById('makeup-eyeshadow-r').setAttribute('opacity', opacity * 0.8);
+                }
+            });
+
+            // 水光高光滑桿
+            sliderGloss.addEventListener('input', (e) => {
+                const val = e.target.value;
+                glossVal.innerText = val === '0' ? '關閉' : val + '%';
+                updateGlossEffect();
+            });
+        }
+
+        // 光澤效果更新
+        function updateGlossEffect() {
+            const glossSliderValue = document.getElementById('slider-gloss').value;
+            const lipGloss = document.getElementById('makeup-lip-gloss');
+            
+            // 只有唇部有亮眼彩妝時，高光才顯現
+            if (currentMakeupState.lip.active && glossSliderValue > 0) {
+                const opacity = (glossSliderValue / 100) * 0.85; // 最大飽和 85%
+                lipGloss.setAttribute('opacity', opacity);
+            } else {
+                lipGloss.setAttribute('opacity', 0);
+            }
+        }
+
+        // 清空妝容
+        window.clearMakeup = function() {
+            document.getElementById('makeup-lip').setAttribute('opacity', 0);
+            document.getElementById('makeup-lip-gloss').setAttribute('opacity', 0);
+            document.getElementById('makeup-blush-l').setAttribute('opacity', 0);
+            document.getElementById('makeup-blush-r').setAttribute('opacity', 0);
+            document.getElementById('makeup-eyeshadow-l').setAttribute('opacity', 0);
+            document.getElementById('makeup-eyeshadow-r').setAttribute('opacity', 0);
+
+            currentMakeupState = {
+                lip: { color: '', active: false },
+                cheek: { color: '', active: false },
+                eyeshadow: { color: '', active: false }
+            };
+
+            document.getElementById('trial-active-badge').classList.add('hidden');
+            document.getElementById('makeup-info-box').innerText = '點選左側下方儲存的化妝品卡片，一鍵即時上妝試色';
+            
+            showToast("已清空模擬鏡妝容", "success");
+        };
+
+        // ================= 全域輕量美觀通知機制 (Toast) =================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-manager');
+            const toast = document.createElement('div');
+            
+            toast.className = `p-3 rounded-xl shadow-lg border text-xs pointer-events-auto flex items-center justify-between transition-all duration-300 transform translate-x-12 opacity-0`;
+            
+            if (type === 'success') {
+                toast.classList.add('bg-white', 'border-[#DFD9CD]', 'text-[#7A8275]');
+            } else {
+                toast.classList.add('bg-rose-50', 'border-rose-100', 'text-rose-600');
+            }
+
+            toast.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <span class="w-1.5 h-1.5 rounded-full ${type === 'success' ? 'bg-[#7A8275]' : 'bg-rose-500'}"></span>
+                    <p class="font-medium">${message}</p>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            // 動態滑入
+            setTimeout(() => {
+                toast.classList.remove('translate-x-12', 'opacity-0');
+            }, 10);
+
+            // 自動滑出並銷毀
+            setTimeout(() => {
+                toast.classList.add('translate-x-12', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 2500);
+        }
+
     </script>
 </body>
 </html>
