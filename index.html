@@ -6,8 +6,10 @@
     <title>化妝品紀錄與模擬器</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Google Fonts - Inter & Playfair Display (兼顧質感與易讀) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <!-- 引入 SheetJS (解析 Excel 專用) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- 引入 Google Fonts - Inter & Playfair Display -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght=0,400;0,600;1,400&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -54,7 +56,7 @@
     <!-- 主要響應式佈局 -->
     <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-6">
         
-        <!-- 手機優先：在小螢幕是 1 欄，在 md(768px) 以上是 2 欄 (左側登錄+列表，右側試妝鏡) -->
+        <!-- 手機優先：在小螢幕是 1 欄，在 md 以上是 2 欄 -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             <!-- 左側/中側：表單與卡片列表 (佔 7 欄) -->
@@ -62,10 +64,20 @@
                 
                 <!-- 新增化妝品表單卡片 -->
                 <div class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-5 transition-all">
-                    <h2 class="text-sm font-medium text-[#4E534A] border-b border-[#F0EAE1] pb-3 mb-4 flex items-center">
-                        <svg class="w-4 h-4 mr-1.5 text-[#7A8275]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
-                        登記彩妝
-                    </h2>
+                    <div class="border-b border-[#F0EAE1] pb-3 mb-4 flex items-center justify-between">
+                        <h2 class="text-sm font-medium text-[#4E534A] flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-[#7A8275]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                            登記彩妝
+                        </h2>
+                        <!-- 批次匯入 Excel 按鈕 -->
+                        <div class="relative">
+                            <button type="button" onclick="document.getElementById('excel-file-picker').click()" class="bg-[#7A8275]/10 text-[#7A8275] hover:bg-[#7A8275]/20 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center transition shadow-sm">
+                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"></path></svg>
+                                📂 批次匯入 Excel
+                            </button>
+                            <input type="file" id="excel-file-picker" accept=".xlsx, .xls" class="hidden">
+                        </div>
+                    </div>
                     
                     <form id="cosmetic-form" onsubmit="event.preventDefault();" class="space-y-4">
                         <!-- 產品名稱 -->
@@ -98,7 +110,7 @@
                             </div>
                         </div>
 
-                        <!-- 品牌 + 色號 (雙欄) -->
+                        <!-- 品牌 + 色號 -->
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-medium text-[#7A8275] mb-1">品牌</label>
@@ -112,7 +124,7 @@
                             </div>
                         </div>
 
-                        <!-- 色調類型 + 質地 (雙欄) -->
+                        <!-- 色調類型 + 質地 -->
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-medium text-[#7A8275] mb-1">色調類型</label>
@@ -142,7 +154,7 @@
                         <div>
                             <label class="block text-xs font-medium text-[#7A8275] mb-1">上傳試色圖片 (並點擊提取顏色)</label>
                             <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-                                <!-- 左側：上傳按鈕與預覽 -->
+                                <!-- 左側：上傳預覽 -->
                                 <div class="md:col-span-8">
                                     <div class="relative group border-2 border-dashed border-[#DFD9CD] rounded-xl bg-[#F9F6F0] hover:border-[#7A8275] transition flex flex-col items-center justify-center p-3 text-center cursor-pointer min-h-[140px]">
                                         <input type="file" id="image-picker" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
@@ -151,11 +163,10 @@
                                             <p class="text-[11px] text-[#7A8275] font-medium">點擊上傳 / 相機拍試色照</p>
                                             <p class="text-[9px] text-[#A39B8F]">上傳後可直接點圖「吸色」</p>
                                         </div>
-                                        <!-- 上傳後顯示圖片的 Canvas -->
                                         <canvas id="eyedropper-canvas" class="hidden max-h-[180px] max-w-full rounded-lg shadow-sm z-20 object-contain"></canvas>
                                     </div>
                                 </div>
-                                <!-- 右側：目前提取出的顏色 HEX 與預覽 -->
+                                <!-- 右側：目前提取出的顏色 -->
                                 <div class="md:col-span-4 flex flex-row md:flex-col items-center justify-center md:justify-start bg-[#F9F6F0] p-3 rounded-xl border border-[#DFD9CD] gap-3">
                                     <div class="relative">
                                         <div id="color-preview" class="w-12 h-12 rounded-full border-2 border-white shadow-md transition-colors bg-[#E17A7A]"></div>
@@ -164,7 +175,6 @@
                                     <div class="text-center">
                                         <p class="text-[10px] text-[#7A8275] uppercase tracking-wider font-semibold">提取色值</p>
                                         <input type="text" id="color-hex" value="#E17A7A" class="w-20 text-xs text-center font-mono mt-1 bg-white border border-[#DFD9CD] rounded-md py-0.5 focus:outline-none">
-                                        <p class="text-[8px] text-[#A39B8F] mt-1 hidden md:block">點擊色圓可微調</p>
                                     </div>
                                 </div>
                             </div>
@@ -201,7 +211,7 @@
 
             </div>
 
-            <!-- 右側：仿真人臉試妝鏡 (佔 5 欄) -->
+            <!-- 右側：仿真人臉試妝鏡 -->
             <div class="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
                 <div class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-4 text-center">
                     <div class="flex items-center justify-between mb-3 border-b border-[#F0EAE1] pb-2">
@@ -209,7 +219,6 @@
                             <svg class="w-4 h-4 mr-1 text-[#7A8275]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                             模擬試妝
                         </h2>
-                        <!-- 重置妝容 -->
                         <button onclick="window.clearMakeup()" class="text-[10px] text-rose-500 hover:underline flex items-center">
                             清空妝容
                         </button>
@@ -217,11 +226,8 @@
 
                     <!-- SVG 向量人臉 -->
                     <div class="relative bg-[#F9F6F0]/50 rounded-2xl py-6 flex justify-center items-center overflow-hidden border border-[#F0EAE1]">
-                        
-                        <!-- 向量仿真面部 SVG -->
                         <svg id="face-mirror" class="w-60 h-60 max-w-full drop-shadow-md" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                             <defs>
-                                <!-- 羽化濾鏡：使腮紅和眼影呈現極自然的煙燻暈染效果 -->
                                 <filter id="blush-blur" x="-20%" y="-20%" width="140%" height="140%">
                                     <feGaussianBlur stdDeviation="8" />
                                 </filter>
@@ -229,52 +235,28 @@
                                     <feGaussianBlur stdDeviation="4.5" />
                                 </filter>
                             </defs>
-
-                            <!-- 脖子與下巴輪廓 -->
                             <path d="M75,150 L75,190 C75,190 100,200 125,190 L125,150 Z" fill="#FCE9DB" />
                             <path d="M70,165 C85,178 115,178 130,165" fill="none" stroke="#E6C6B0" stroke-width="2" stroke-linecap="round"/>
-
-                            <!-- 臉部基底 -->
                             <path d="M55,80 C50,135 68,168 100,168 C132,168 150,135 145,80 C140,40 128,30 100,30 C72,30 60,40 55,80 Z" fill="#FDF3EB" stroke="#F3DEC2" stroke-width="0.5" />
-
-                            <!-- 雙耳 -->
                             <ellipse cx="51" cy="95" rx="5" ry="9" fill="#FCE9DB" />
                             <ellipse cx="149" cy="95" rx="5" ry="9" fill="#FCE9DB" />
-
-                            <!-- 溫柔莫蘭迪髮型 (極簡線條) -->
                             <path d="M54,80 C50,55 70,25 100,25 C130,25 150,55 146,80 C144,70 140,50 125,40 C110,32 90,32 75,40 C60,50 56,70 54,80 Z" fill="#696D65" />
-
-                            <!-- 眉毛 -->
                             <path d="M72,68 C78,63 84,63 90,66" fill="none" stroke="#555A51" stroke-width="1.8" stroke-linecap="round" />
                             <path d="M128,68 C122,63 116,63 110,66" fill="none" stroke="#555A51" stroke-width="1.8" stroke-linecap="round" />
-
-                            <!-- 眼睫與眼部輪廓 -->
                             <path d="M74,77 C78,74 84,74 88,77" fill="none" stroke="#4E534A" stroke-width="1.5" stroke-linecap="round" />
                             <path d="M126,77 C122,74 116,74 112,77" fill="none" stroke="#4E534A" stroke-width="1.5" stroke-linecap="round" />
-                            <!-- 雙眼 (閉眼微笑型，最適合不干擾色彩表現) -->
                             <path d="M75,79 C78,81 84,81 87,79" fill="none" stroke="#4E534A" stroke-width="1" stroke-linecap="round" />
                             <path d="M125,79 C122,81 116,81 113,79" fill="none" stroke="#4E534A" stroke-width="1" stroke-linecap="round" />
-
-                            <!-- 挺直精緻的鼻子 -->
                             <path d="M100,75 L100,116 C100,118 97,120 96,120 C95,120 94,119 94,118" fill="none" stroke="#E6C6B0" stroke-width="1.5" stroke-linecap="round" />
 
-                            <!-- ================= 實時渲染妝容圖層 ================= -->
-                            
-                            <!-- 1. 眼影圖層 (套用 blur 濾鏡) -->
+                            <!-- 妝容圖層 -->
                             <path id="makeup-eyeshadow-l" d="M 68,75 C 75,64 85,64 92,75 Z" fill="none" opacity="0" filter="url(#eyeshadow-blur)" class="transition-all duration-300" />
                             <path id="makeup-eyeshadow-r" d="M 132,75 C 125,64 115,64 108,75 Z" fill="none" opacity="0" filter="url(#eyeshadow-blur)" class="transition-all duration-300" />
-
-                            <!-- 2. 腮紅圖層 (左/右頰，大面積羽化) -->
                             <circle id="makeup-blush-l" cx="72" cy="116" r="14" fill="none" opacity="0" filter="url(#blush-blur)" class="transition-all duration-300" />
                             <circle id="makeup-blush-r" cx="128" cy="116" r="14" fill="none" opacity="0" filter="url(#blush-blur)" class="transition-all duration-300" />
-
-                            <!-- 3. 嘴唇圖層 (包含上唇與下唇線條) -->
                             <path id="makeup-lip" d="M 86,136 C 92,131 96,133 100,135 C 104,133 108,131 114,136 C 109,144 91,144 86,136 Z" fill="none" opacity="0" class="transition-all duration-300" />
-                            <!-- 嘴唇高光：模擬水光/偏光玻璃效果 -->
                             <ellipse id="makeup-lip-gloss" cx="100" cy="138" rx="8" ry="1.5" fill="#FFFFFF" opacity="0" class="transition-all duration-300 pointer-events-none" />
                         </svg>
-
-                        <!-- 現正試妝中浮動狀態 -->
                         <div id="trial-active-badge" class="hidden absolute top-2 right-2 bg-[#7A8275] text-white text-[9px] px-2 py-0.5 rounded-full font-mono shadow-sm">
                             TRIALING
                         </div>
@@ -283,40 +265,47 @@
                     <!-- 試妝微調面板 -->
                     <div class="mt-4 space-y-3 text-left bg-[#F9F6F0] p-3 rounded-xl border border-[#F0EAE1]">
                         <h4 class="text-[11px] font-semibold text-[#7A8275] uppercase tracking-wider">妝效微調選項</h4>
-                        
-                        <!-- 顯色強度 -->
                         <div>
                             <div class="flex justify-between text-[11px] text-[#7A8275] mb-1">
                                 <span>顯色強度 (濃度)</span>
                                 <span id="opacity-val">65%</span>
                             </div>
-                            <input type="range" id="slider-opacity" min="10" max="100" value="65" 
-                                   class="w-full accent-[#7A8275] bg-[#DFD9CD] h-1 rounded-lg appearance-none cursor-pointer">
+                            <input type="range" id="slider-opacity" min="10" max="100" value="65" class="w-full accent-[#7A8275] bg-[#DFD9CD] h-1 rounded-lg appearance-none cursor-pointer">
                         </div>
-
-                        <!-- 嘴唇光澤度 -->
                         <div>
                             <div class="flex justify-between text-[11px] text-[#7A8275] mb-1">
                                 <span>水光玻璃光澤 (僅限唇部)</span>
                                 <span id="gloss-val">關閉</span>
                             </div>
-                            <input type="range" id="slider-gloss" min="0" max="100" value="0" 
-                                   class="w-full accent-[#7A8275] bg-[#DFD9CD] h-1 rounded-lg appearance-none cursor-pointer">
+                            <input type="range" id="slider-gloss" min="0" max="100" value="0" class="w-full accent-[#7A8275] bg-[#DFD9CD] h-1 rounded-lg appearance-none cursor-pointer">
                         </div>
                     </div>
 
-                    <!-- 目前顯示試妝訊息 -->
                     <div id="makeup-info-box" class="mt-3 text-center text-xs text-[#7A8275]/80 bg-white border border-[#DFD9CD] py-2 px-3 rounded-lg min-h-[40px] flex items-center justify-center">
-                        點選左側下方儲存的化妝品卡片，一鍵即時上妝試色
+                        點選下方儲存的卡片一鍵試妝
                     </div>
                 </div>
-                
+
+                <!-- 手機版指南折疊 -->
+                <details class="bg-white rounded-2xl border border-[#DFD9CD] p-3 shadow-sm text-xs group cursor-pointer" open>
+                    <summary class="font-medium text-[#7A8275] flex justify-between items-center select-none">
+                        <span>📱 雲端同步重要檢查清單（手機保存必看）</span>
+                        <span class="text-[10px] text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div class="mt-3 space-y-2 text-[#7A8275]/90 border-t border-[#F0EAE1] pt-3">
+                        <p class="font-semibold text-rose-500">⚠ 若發現「重整網頁後資料就不見」，請確認以下設定：</p>
+                        <ol class="list-decimal pl-4 space-y-1.5 text-[11px]">
+                            <li><strong>開啟匿名認證：</strong> 進入 Firebase Console ➡ Authentication ➡ Sign-in method ➡ 啟用 <strong>「匿名 (Anonymous)」</strong> 登入方式。</li>
+                            <li><strong>設定安全規則：</strong> 進入 Firestore Database ➡ 規則 (Rules) ➡ 將內容修改並發布為：<br><code class="block bg-gray-100 p-1.5 my-1 text-[10px] rounded text-gray-700">allow read, write: if request.auth != null;</code></li>
+                            <li><strong>新增 GitHub 授權網域：</strong> 到 Authentication ➡ 設定 (Settings) ➡ 授權網域 ➡ 新增 <code>您的帳號.github.io</code>（不可帶有 https://）。</li>
+                        </ol>
+                    </div>
+                </details>
             </div>
 
         </div>
     </main>
 
-    <!-- 全域通知訊息容器 -->
     <div id="toast-manager" class="fixed top-20 right-4 z-[9999] pointer-events-none flex flex-col space-y-2 max-w-sm w-[280px]"></div>
 
     <!-- 頁腳 -->
@@ -330,9 +319,8 @@
 
     <!-- JavaScript 業務邏輯與 Firebase SDK -->
     <script type="module">
-        // 導入 Firebase 12.16.0 最新版模組
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
         // Firebase 應用配置
@@ -345,21 +333,19 @@
             appId: "1:384419679166:web:8b6ce90032d04d6e2fc7ef"
         };
 
-        // 初始化 Firebase
         let db = null;
         let auth = null;
-        let localData = []; // 如果雲端尚未設定好，提供本地備份快取，防止網頁破裂
+        let localData = []; 
         let activeFilter = 'all';
-
-        // 即時本地暫存，便於離線及調用
         let currentUploadedImageBase64 = ''; 
 
         // 初始化狀態與連線
         window.addEventListener('load', () => {
+            loadLocalCache(); // 優先立即載入本地快取，防止畫面空白
             initAppServices();
             setupInteractiveCanvas();
             setupSliders();
-            loadLocalCache();
+            setupExcelImporter();
         });
 
         // 初始化 Firebase 雲端與匿名登入
@@ -380,13 +366,14 @@
                 
                 // 開始實時監聽 Firestore
                 listenToCosmetics();
-                showToast("已成功連接至 Firestore 雲端資料庫", "success");
+                showToast("雲端資料庫連線成功", "success");
             } catch (error) {
-                console.warn("Firebase 初始化失敗，自動啟用本地快取機制:", error);
+                console.warn("Firebase 連線受阻，切換為「本地儲存模式」:", error);
+                db = null; // 確保 db 標記為 null 進行完美降級
+                auth = null;
                 statusDot.className = "w-2 h-2 rounded-full bg-orange-400";
                 statusText.innerText = "本地儲存模式";
                 
-                // Firestore 無法使用時，啟用 localStorage
                 renderListFromCache();
             }
         }
@@ -402,7 +389,6 @@
             const colorHex = document.getElementById('color-hex');
             const colorWheel = document.getElementById('color-wheel-picker');
 
-            // 監聽圖片上傳
             imagePicker.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -411,20 +397,15 @@
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
-                        // 讓 Canvas 顯示出來並適應比例
                         eyedropperCanvas.classList.remove('hidden');
                         uploadPlaceholder.classList.add('hidden');
 
-                        // 設定 Canvas 大小
                         const maxW = 320;
                         const scale = maxW / img.width;
                         eyedropperCanvas.width = maxW;
                         eyedropperCanvas.height = img.height * scale;
 
-                        // 渲染到 Canvas 上
                         ctx.drawImage(img, 0, 0, eyedropperCanvas.width, eyedropperCanvas.height);
-
-                        // 儲存為 Base64（便於上傳 Firestore 或本地存儲，小圖壓縮）
                         compressAndStoreImage(img);
                     };
                     img.src = event.target.result;
@@ -432,7 +413,6 @@
                 reader.readAsDataURL(file);
             });
 
-            // 壓縮圖片 Base64，避免超過 Firestore 限制 (縮至 120x120 小縮圖做試色備份)
             function compressAndStoreImage(originalImg) {
                 const tempCanvas = document.createElement('canvas');
                 const tempCtx = tempCanvas.getContext('2d');
@@ -442,40 +422,25 @@
                 currentUploadedImageBase64 = tempCanvas.toDataURL('image/jpeg', 0.6);
             }
 
-            // 點擊 Canvas 提取顏色
             eyedropperCanvas.addEventListener('click', (e) => {
                 const rect = eyedropperCanvas.getBoundingClientRect();
-                // 換算成 canvas 的實際像素坐標
                 const x = (e.clientX - rect.left) * (eyedropperCanvas.width / rect.width);
                 const y = (e.clientY - rect.top) * (eyedropperCanvas.height / rect.height);
 
                 try {
                     const pixel = ctx.getImageData(x, y, 1, 1).data;
-                    const r = pixel[0];
-                    const g = pixel[1];
-                    const b = pixel[2];
-                    const hex = rgbToHex(r, g, b);
-
-                    // 更新色彩選擇器與預覽
+                    const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
                     updatePickedColor(hex);
-                    showToast(`吸取顏色：${hex}`, "success");
+                    showToast(`提取顏色：${hex}`, "success");
                 } catch (error) {
-                    console.error("無法提取顏色:", error);
-                    showToast("此圖片受到安全性限制，無法直接點選吸色", "error");
+                    showToast("圖片受限，無法點選提取顏色", "error");
                 }
             });
 
-            // 連動原生調色盤
-            colorWheel.addEventListener('input', (e) => {
-                updatePickedColor(e.target.value);
-            });
-
-            // 手動輸入 HEX 連動
+            colorWheel.addEventListener('input', (e) => { updatePickedColor(e.target.value); });
             colorHex.addEventListener('input', (e) => {
                 let val = e.target.value;
-                if(val.startsWith('#') && val.length === 7) {
-                    updatePickedColor(val);
-                }
+                if(val.startsWith('#') && val.length === 7) updatePickedColor(val);
             });
 
             function updatePickedColor(hex) {
@@ -485,32 +450,41 @@
             }
         }
 
-        // 輔助工具：RGB 轉 HEX
         function rgbToHex(r, g, b) {
             return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
         }
 
-        // 監聽/拉取 Firestore 彩妝數據
+        // 監聽/拉取 Firestore 彩妝數據（保護本地資料不被空雲端抹除）
         function listenToCosmetics() {
             if (!db) return;
             const q = query(collection(db, "cosmetics"), orderBy("createdAt", "desc"));
             
             onSnapshot(q, (snapshot) => {
-                const items = [];
+                const cloudItems = [];
                 snapshot.forEach((doc) => {
-                    items.push({ id: doc.id, ...doc.data() });
+                    cloudItems.push({ id: doc.id, ...doc.data() });
                 });
-                localData = items;
-                // 同步備份到 localStorage 防止突然沒網
-                localStorage.setItem('cosmetics_backup', JSON.stringify(items));
+
+                // 【核心修復機制】抽取出「本地限定」未成功上傳雲端的資料 (ID 開頭為 local_)
+                const localOnlyItems = localData.filter(item => String(item.id).startsWith('local_'));
+                
+                // 合併雲端與本地資料，避免雲端空白將本地暫存同步清除
+                const merged = [...cloudItems];
+                localOnlyItems.forEach(localItem => {
+                    if (!merged.some(cItem => cItem.name === localItem.name && cItem.colorHex === localItem.colorHex)) {
+                        merged.push(localItem);
+                    }
+                });
+
+                localData = merged;
+                localStorage.setItem('cosmetics_backup', JSON.stringify(merged));
                 renderList();
             }, (error) => {
-                console.error("Firestore 實時監聽出錯:", error);
+                console.error("Firestore 監聽失敗，改用純本地模式:", error);
                 renderListFromCache();
             });
         }
 
-        // 本地快取載入機制
         function loadLocalCache() {
             const cached = localStorage.getItem('cosmetics_backup');
             if (cached) {
@@ -523,7 +497,7 @@
             loadLocalCache();
         }
 
-        // 送出表單 (上傳雲端 / 存入本地)
+        // 送出表單 (上傳雲端 / 失敗時儲存本地)
         window.submitCosmeticForm = async function() {
             const name = document.getElementById('itemName').value.trim();
             const brand = document.getElementById('itemBrand').value.trim();
@@ -533,7 +507,6 @@
             const expiry = document.getElementById('itemExpiry').value;
             const hex = document.getElementById('color-hex').value;
 
-            // 取得多選類別
             const checkedCategories = [];
             document.querySelectorAll('input[name="categories"]:checked').forEach(cb => {
                 checkedCategories.push(cb.value);
@@ -544,7 +517,7 @@
                 return;
             }
             if (checkedCategories.length === 0) {
-                showToast("請至少勾選一個產品類別", "error");
+                showToast("請勾選至少一個產品類別", "error");
                 return;
             }
 
@@ -561,75 +534,202 @@
                 createdAt: new Date().getTime()
             };
 
-            // 1. 如果雲端可用，上傳到 Firestore
             if (db) {
                 try {
+                    // 嘗試寫入雲端
                     await addDoc(collection(db, "cosmetics"), itemPayload);
-                    showToast(`已成功登錄「${name}」並同步雲端`, "success");
+                    showToast(`「${name}」已同步至 Firebase 雲端`, "success");
                     resetForm();
                 } catch (e) {
-                    console.error("寫入 Firestore 失敗，改用本地:", e);
+                    console.warn("Firebase 寫入權限遭拒，改存本地瀏覽器暫存:", e);
+                    showToast(`⚠️ 雲端同步失敗（請檢查後台權限），已先安全儲存於本地！`, "error");
                     saveToLocalFallback(itemPayload);
                 }
             } else {
-                // 2. 否則僅存入本地
                 saveToLocalFallback(itemPayload);
             }
         };
 
         function saveToLocalFallback(payload) {
             payload.id = 'local_' + Date.now();
-            localData.unshift(payload);
+            
+            // 避免重複加入
+            if (!localData.some(item => item.name === payload.name && item.colorHex === payload.colorHex)) {
+                localData.unshift(payload);
+            }
+            
             localStorage.setItem('cosmetics_backup', JSON.stringify(localData));
-            showToast(`已存入本地儲存「${payload.name}」`, "success");
             renderList();
             resetForm();
         }
 
+        // Excel 批次匯入解析模組 (對齊 test.xlsx)
+        function setupExcelImporter() {
+            const filePicker = document.getElementById('excel-file-picker');
+            
+            filePicker.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    try {
+                        const data = new Uint8Array(event.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // 讀取第一個分頁
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // 轉換為 JSON 格式
+                        const rawRows = XLSX.utils.sheet_to_json(worksheet);
+                        
+                        if (rawRows.length === 0) {
+                            showToast("此 Excel 檔案內沒有找到任何彩妝資料", "error");
+                            return;
+                        }
+
+                        let importCount = 0;
+                        let failCount = 0;
+
+                        for (const row of rawRows) {
+                            // 模糊對應中文標頭
+                            const name = (row['產品名稱'] || row['名稱'] || row['Name'] || '').toString().trim();
+                            
+                            if (!name) {
+                                failCount++;
+                                continue;
+                            }
+
+                            // 解析多選分類（如："唇膏, 腮紅"、"唇,頰"）
+                            const rawCat = (row['產品類別'] || row['類別'] || row['Category'] || '').toString();
+                            const categories = [];
+                            if (rawCat.includes('唇') || rawCat.toLowerCase().includes('lip')) categories.push('lip');
+                            if (rawCat.includes('腮') || rawCat.includes('頰') || rawCat.toLowerCase().includes('cheek')) categories.push('cheek');
+                            if (rawCat.includes('眼') || rawCat.toLowerCase().includes('eyeshadow')) categories.push('eyeshadow');
+                            if (categories.length === 0) {
+                                // 預設歸入 lip (唇)
+                                categories.push('lip');
+                            }
+
+                            const brand = (row['品牌'] || row['Brand'] || '無品牌').toString().trim();
+                            const code = (row['色號'] || row['Code'] || '標準').toString().trim();
+                            const tone = (row['色調類型'] || row['色調'] || row['Tone'] || '未註明').toString().trim();
+                            
+                            // 解析質地下拉選單
+                            let texture = (row['質地'] || row['Texture'] || '啞光霧面').toString().trim();
+                            const validTextures = ["啞光霧面", "水光玻璃", "絲絨緞光", "金屬閃爍", "輕薄日常"];
+                            if (!validTextures.includes(texture)) {
+                                texture = "啞光霧面"; // 預設容錯
+                            }
+
+                            // 處理有效期限 (Excel 的日期格式可能會轉化為數字，需進行容錯)
+                            let expiry = (row['有效期限'] || row['效期'] || row['Expiry'] || '').toString().trim();
+                            if (/^\d+$/.test(expiry)) {
+                                // Excel 序號日期轉換
+                                const excelDate = parseInt(expiry, 10);
+                                const dateObj = new Date((excelDate - 25569) * 86400 * 1000);
+                                if (!isNaN(dateObj.getTime())) {
+                                    expiry = dateObj.toISOString().split('T')[0];
+                                }
+                            }
+
+                            // 解析試色 HEX
+                            let colorHex = (row['顏色'] || row['色值'] || row['Hex'] || row['Color'] || '#E17A7A').toString().trim();
+                            if (!colorHex.startsWith('#')) {
+                                colorHex = '#' + colorHex;
+                            }
+                            if (colorHex.length !== 7) {
+                                colorHex = '#E17A7A'; // 無效色值退回預設
+                            }
+
+                            const payload = {
+                                name,
+                                categories,
+                                brand,
+                                code,
+                                tone,
+                                texture,
+                                expiry: expiry || "未標記",
+                                colorHex,
+                                photo: null,
+                                createdAt: new Date().getTime()
+                            };
+
+                            // 上傳雲端或本地備份
+                            if (db) {
+                                try {
+                                    await addDoc(collection(db, "cosmetics"), payload);
+                                    importCount++;
+                                } catch (error) {
+                                    saveToLocalFallbackNoAlert(payload);
+                                    importCount++;
+                                }
+                            } else {
+                                saveToLocalFallbackNoAlert(payload);
+                                importCount++;
+                            }
+                        }
+
+                        showToast(`📊 匯入完成！成功：${importCount} 筆` + (failCount > 0 ? ` (因無產品名稱略過 ${failCount} 筆)` : ''), "success");
+                        filePicker.value = ''; // 重置 picker
+
+                    } catch (err) {
+                        console.error("Excel 解析出錯:", err);
+                        showToast("Excel 解析失敗，請確認檔案格式是否正確", "error");
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // 純靜態、不彈窗的本地存儲（Excel 批次儲存防干擾專用）
+        function saveToLocalFallbackNoAlert(payload) {
+            payload.id = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            if (!localData.some(item => item.name === payload.name && item.colorHex === payload.colorHex)) {
+                localData.unshift(payload);
+            }
+            localStorage.setItem('cosmetics_backup', JSON.stringify(localData));
+            renderList();
+        }
+
         // 刪除化妝品
         window.deleteCosmeticItem = async function(id) {
-            if (db && !id.startsWith('local_')) {
+            if (db && !String(id).startsWith('local_')) {
                 try {
                     await deleteDoc(doc(db, "cosmetics", id));
-                    showToast("已從雲端化妝盒移除", "success");
+                    showToast("已從雲端資料庫刪除", "success");
                 } catch (e) {
-                    console.error("刪除失敗:", e);
-                    showToast("無法從雲端移除，請確認權限規則", "error");
+                    console.error("雲端刪除失敗:", e);
+                    showToast("無法在雲端刪除，請檢查權限設定", "error");
                 }
             } else {
                 localData = localData.filter(item => item.id !== id);
                 localStorage.setItem('cosmetics_backup', JSON.stringify(localData));
-                showToast("已從本地移出", "success");
+                showToast("已從手機本地移除", "success");
                 renderList();
             }
         };
 
-        // 清空表單
         function resetForm() {
             document.getElementById('cosmetic-form').reset();
             currentUploadedImageBase64 = '';
             document.getElementById('eyedropper-canvas').classList.add('hidden');
             document.getElementById('upload-placeholder').classList.remove('hidden');
-            // 回復預設綠
             document.getElementById('color-preview').style.backgroundColor = '#E17A7A';
             document.getElementById('color-hex').value = '#E17A7A';
             document.getElementById('color-wheel-picker').value = '#E17A7A';
         }
 
-        // 篩選功能
         window.filterItems = function(category) {
             activeFilter = category;
-            
-            // 標示 active 樣式
             document.querySelectorAll('.category-filter-btn').forEach(btn => {
                 btn.className = "category-filter-btn px-2.5 py-1 text-[11px] rounded-lg bg-white border border-[#DFD9CD] text-[#7A8275] hover:bg-[#F9F6F0] transition";
             });
             event.target.className = "category-filter-btn px-2.5 py-1 text-[11px] rounded-lg bg-[#7A8275] text-white transition";
-
             renderList();
         };
 
-        // 渲染卡片列表
         function renderList() {
             const container = document.getElementById('cosmetics-list');
             const countText = document.getElementById('items-count');
@@ -655,10 +755,8 @@
                 const card = document.createElement('div');
                 card.className = "bg-white border border-[#DFD9CD] rounded-xl p-3 shadow-sm hover:shadow-md transition duration-300 relative group flex justify-between items-start";
                 
-                // 將分類中文標籤化
                 const catLabels = (item.categories || []).map(cat => {
-                    let text = '彩妝';
-                    let bg = 'bg-gray-100 text-gray-600';
+                    let text = '彩'; let bg = 'bg-gray-100 text-gray-600';
                     if (cat === 'lip') { text = '唇'; bg = 'bg-rose-50 text-rose-600'; }
                     if (cat === 'cheek') { text = '頰'; bg = 'bg-orange-50 text-orange-600'; }
                     if (cat === 'eyeshadow') { text = '眼'; bg = 'bg-amber-50 text-amber-600'; }
@@ -666,23 +764,26 @@
                     return `<span class="px-1.5 py-0.5 rounded-md ${bg} text-[9px] font-semibold">${text}</span>`;
                 }).join(' ');
 
-                // 是否有預覽小圖
+                // 標記本項目是儲存在雲端還是純手機本地
+                const storageBadge = String(item.id).startsWith('local_')
+                    ? `<span class="px-1 py-0.2 bg-orange-50 text-orange-600 rounded text-[8px] font-semibold scale-90">手機暫存</span>`
+                    : `<span class="px-1 py-0.2 bg-emerald-50 text-emerald-600 rounded text-[8px] font-semibold scale-90">雲端同步</span>`;
+
                 const imgTag = item.photo 
                     ? `<img src="${item.photo}" class="w-8 h-8 rounded-lg object-cover border border-[#DFD9CD] shadow-inner flex-shrink-0" alt="色彩相片">`
                     : `<div class="w-8 h-8 rounded-lg bg-[#F9F6F0] border border-[#DFD9CD] flex items-center justify-center text-[9px] text-[#A39B8F] flex-shrink-0">無圖</div>`;
 
                 card.innerHTML = `
                     <div class="flex items-start space-x-2.5 max-w-[85%] cursor-pointer" onclick="window.applyMakeupToFace('${item.colorHex}', '${item.categories ? item.categories.join(',') : 'lip'}', '${item.name}', '${item.brand}', '${item.code}')">
-                        <!-- 色彩圓圈與小圖 -->
                         <div class="flex flex-col items-center space-y-1">
                             <div class="w-6 h-6 rounded-full border border-white shadow-md flex-shrink-0" style="background-color: ${item.colorHex};"></div>
                             ${imgTag}
                         </div>
-                        <!-- 文字資料 -->
                         <div class="space-y-0.5">
                             <div class="flex items-center space-x-1 flex-wrap gap-y-1">
                                 <h4 class="text-xs font-bold text-[#4E534A] leading-tight">${item.name}</h4>
                                 <span class="text-[9px] text-[#7A8275] bg-[#F0EAE1] px-1 rounded font-mono">${item.colorHex}</span>
+                                ${storageBadge}
                             </div>
                             <p class="text-[10px] text-[#7A8275]">${item.brand} • 色號: ${item.code}</p>
                             <div class="text-[9px] text-[#A39B8F] flex items-center space-x-1">
@@ -696,9 +797,7 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- 刪除按鈕 (Hover 顯現) -->
-                    <button onclick="window.deleteCosmeticItem('${item.id}')" class="text-gray-400 hover:text-rose-500 p-1 rounded-full hover:bg-gray-50 transition" title="刪除本項">
+                    <button onclick="window.deleteCosmeticItem('${item.id}')" class="text-gray-400 hover:text-rose-500 p-1 rounded-full hover:bg-gray-50 transition">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 `;
@@ -706,14 +805,13 @@
             });
         }
 
-        // ================= 試妝鏡互動邏輯 =================
+        // 試妝鏡互動邏輯
         let currentMakeupState = {
             lip: { color: '', active: false },
             cheek: { color: '', active: false },
             eyeshadow: { color: '', active: false }
         };
 
-        // 點選列表卡片進行「一鍵上妝」
         window.applyMakeupToFace = function(color, categoryString, name, brand, code) {
             const categories = categoryString.split(',');
             const opacity = document.getElementById('slider-opacity').value / 100;
@@ -728,8 +826,6 @@
                     lipPath.setAttribute('fill', color);
                     lipPath.setAttribute('opacity', opacity);
                     currentMakeupState.lip = { color, active: true };
-                    
-                    // 水光高光配合
                     updateGlossEffect();
                 }
                 if (cat === 'cheek') {
@@ -737,7 +833,6 @@
                     const cheekR = document.getElementById('makeup-blush-r');
                     cheekL.setAttribute('fill', color);
                     cheekR.setAttribute('fill', color);
-                    // 腮紅需要更柔和，故在滑桿基礎上再降低強度
                     cheekL.setAttribute('opacity', opacity * 0.7);
                     cheekR.setAttribute('opacity', opacity * 0.7);
                     currentMakeupState.cheek = { color, active: true };
@@ -747,44 +842,34 @@
                     const eyeR = document.getElementById('makeup-eyeshadow-r');
                     eyeL.setAttribute('fill', color);
                     eyeR.setAttribute('fill', color);
-                    // 眼影強度
                     eyeL.setAttribute('opacity', opacity * 0.8);
                     eyeR.setAttribute('opacity', opacity * 0.8);
                     currentMakeupState.eyeshadow = { color, active: true };
                 }
             });
 
-            // 更新下方當前試妝資訊
             infoBox.innerHTML = `
                 <div class="text-[11px]">
                     <span class="font-bold text-[#4E534A]">現正試用：</span>
                     <span class="bg-[#F0EAE1] px-1.5 py-0.5 rounded text-[#7A8275] text-[10px] font-semibold">${brand} • ${name}</span>
-                    <div class="mt-0.5 text-[#A39B8F] text-[9px]">色號：${code} / 試色：<span class="font-mono">${color}</span></div>
+                    <div class="mt-0.5 text-[#A39B8F] text-[9px]">色號：${code} / HEX：<span class="font-mono">${color}</span></div>
                 </div>
             `;
-            
-            showToast(`已渲染 ${brand}「${name}」於模擬部位`, "success");
+            showToast(`已成功試用「${name}」`, "success");
         };
 
-        // 設定滑桿交互
         function setupSliders() {
             const sliderOpacity = document.getElementById('slider-opacity');
             const opacityVal = document.getElementById('opacity-val');
-            
             const sliderGloss = document.getElementById('slider-gloss');
             const glossVal = document.getElementById('gloss-val');
 
-            // 濃度滑桿
             sliderOpacity.addEventListener('input', (e) => {
                 const val = e.target.value;
                 opacityVal.innerText = val + '%';
-                
                 const opacity = val / 100;
                 
-                // 動態調整目前生效部位的透明度
-                if (currentMakeupState.lip.active) {
-                    document.getElementById('makeup-lip').setAttribute('opacity', opacity);
-                }
+                if (currentMakeupState.lip.active) document.getElementById('makeup-lip').setAttribute('opacity', opacity);
                 if (currentMakeupState.cheek.active) {
                     document.getElementById('makeup-blush-l').setAttribute('opacity', opacity * 0.7);
                     document.getElementById('makeup-blush-r').setAttribute('opacity', opacity * 0.7);
@@ -795,7 +880,6 @@
                 }
             });
 
-            // 水光高光滑桿
             sliderGloss.addEventListener('input', (e) => {
                 const val = e.target.value;
                 glossVal.innerText = val === '0' ? '關閉' : val + '%';
@@ -803,21 +887,16 @@
             });
         }
 
-        // 光澤效果更新
         function updateGlossEffect() {
             const glossSliderValue = document.getElementById('slider-gloss').value;
             const lipGloss = document.getElementById('makeup-lip-gloss');
-            
-            // 只有唇部有亮眼彩妝時，高光才顯現
             if (currentMakeupState.lip.active && glossSliderValue > 0) {
-                const opacity = (glossSliderValue / 100) * 0.85; // 最大飽和 85%
-                lipGloss.setAttribute('opacity', opacity);
+                lipGloss.setAttribute('opacity', (glossSliderValue / 100) * 0.85);
             } else {
                 lipGloss.setAttribute('opacity', 0);
             }
         }
 
-        // 清空妝容
         window.clearMakeup = function() {
             document.getElementById('makeup-lip').setAttribute('opacity', 0);
             document.getElementById('makeup-lip-gloss').setAttribute('opacity', 0);
@@ -833,22 +912,19 @@
             };
 
             document.getElementById('trial-active-badge').classList.add('hidden');
-            document.getElementById('makeup-info-box').innerText = '點選左側下方儲存的化妝品卡片，一鍵即時上妝試色';
-            
-            showToast("已清空模擬鏡妝容", "success");
+            document.getElementById('makeup-info-box').innerText = '點選下方儲存的卡片一鍵試妝';
+            showToast("已清空妝容", "success");
         };
 
-        // ================= 全域輕量美觀通知機制 (Toast) =================
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-manager');
             const toast = document.createElement('div');
+            toast.className = `p-3 rounded-xl shadow-lg border text-xs pointer-events-auto flex items-center justify-between transition-all duration-300 transform translate-x-12 opacity-0 bg-white`;
             
-            toast.className = `p-3 rounded-xl shadow-lg border text-xs pointer-events-auto flex items-center justify-between transition-all duration-300 transform translate-x-12 opacity-0`;
-            
-            if (type === 'success') {
-                toast.classList.add('bg-white', 'border-[#DFD9CD]', 'text-[#7A8275]');
-            } else {
+            if (type !== 'success') {
                 toast.classList.add('bg-rose-50', 'border-rose-100', 'text-rose-600');
+            } else {
+                toast.classList.add('border-[#DFD9CD]', 'text-[#7A8275]');
             }
 
             toast.innerHTML = `
@@ -859,21 +935,12 @@
             `;
 
             container.appendChild(toast);
-
-            // 動態滑入
-            setTimeout(() => {
-                toast.classList.remove('translate-x-12', 'opacity-0');
-            }, 10);
-
-            // 自動滑出並銷毀
+            setTimeout(() => { toast.classList.remove('translate-x-12', 'opacity-0'); }, 10);
             setTimeout(() => {
                 toast.classList.add('translate-x-12', 'opacity-0');
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
-            }, 2500);
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 3000);
         }
-
     </script>
 </body>
 </html>
