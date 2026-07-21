@@ -33,6 +33,21 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #A39B8F;
         }
+        
+        /* 手機版分頁顯示邏輯 */
+        @media (max-width: 1023px) {
+            body.mobile-mode-form #mirror-container { display: none !important; }
+            body.mobile-mode-mirror #form-container { display: none !important; }
+            
+            /* 在試妝模式下，確保鏡子置頂方便點選下方清單試色 */
+            body.mobile-mode-mirror #mirror-container { 
+                position: sticky; 
+                top: 106px; /* 根據 header + tab 高度調整 */
+                z-index: 30; 
+                margin-bottom: 1.5rem;
+                display: block !important;
+            }
+        }
     </style>
 </head>
 <body class="text-[#3D403A] min-h-screen flex flex-col transition-colors duration-300">
@@ -53,19 +68,30 @@
         </div>
     </header>
 
+    <!-- 手機版分頁切換 (Desktop 隱藏) -->
+    <div class="lg:hidden flex bg-white border-b border-[#DFD9CD] sticky top-[52px] z-40 shadow-sm">
+        <button id="tab-form" onclick="window.switchMobileTab('form')" class="flex-1 py-3 text-[13px] font-bold text-[#7A8275] border-b-[3px] border-[#7A8275] transition">
+            📝 登記與列表
+        </button>
+        <button id="tab-mirror" onclick="window.switchMobileTab('mirror')" class="flex-1 py-3 text-[13px] font-medium text-[#A39B8F] border-b-[3px] border-transparent transition hover:text-[#7A8275]">
+            🪞 模擬試妝鏡
+        </button>
+    </div>
+
     <!-- 主要響應式佈局 -->
     <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-6">
         
-        <!-- 手機優先：在小螢幕是 1 欄，在 md 以上是 2 欄 -->
+        <!-- 網格佈局：手機依照分頁切換，電腦版維持雙欄 -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             <!-- 左側/中側：表單與卡片列表 (佔 7 欄) -->
             <div class="lg:col-span-7 space-y-6">
                 
-                <!-- 新增化妝品表單卡片 -->
-                <div class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-5 transition-all">
+                <!-- 新增/編輯化妝品表單卡片 -->
+                <div id="form-container" class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-5 transition-all relative overflow-hidden">
+                    <div id="edit-indicator" class="hidden absolute top-0 left-0 w-full h-1.5 bg-amber-400"></div>
                     <div class="border-b border-[#F0EAE1] pb-3 mb-4 flex items-center justify-between">
-                        <h2 class="text-sm font-medium text-[#4E534A] flex items-center">
+                        <h2 id="form-title" class="text-sm font-medium text-[#4E534A] flex items-center">
                             <svg class="w-4 h-4 mr-1.5 text-[#7A8275]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
                             登記彩妝
                         </h2>
@@ -73,7 +99,7 @@
                         <div class="relative">
                             <button type="button" onclick="document.getElementById('excel-file-picker').click()" class="bg-[#7A8275]/10 text-[#7A8275] hover:bg-[#7A8275]/20 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center transition shadow-sm">
                                 <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"></path></svg>
-                                📂 批次匯入 Excel
+                                📂 匯入 Excel
                             </button>
                             <input type="file" id="excel-file-picker" accept=".xlsx, .xls" class="hidden">
                         </div>
@@ -180,15 +206,20 @@
                             </div>
                         </div>
 
-                        <!-- 儲存按鈕 -->
-                        <button type="button" onclick="window.submitCosmeticForm()" class="w-full bg-[#7A8275] text-white hover:bg-[#686E64] py-2.5 rounded-xl text-sm font-medium transition shadow-sm hover:shadow active:scale-[0.98]">
-                            存入 / 同步至雲端
-                        </button>
+                        <!-- 儲存/更新按鈕區域 -->
+                        <div class="flex space-x-3">
+                            <button type="button" id="btn-submit-form" onclick="window.submitCosmeticForm()" class="flex-1 bg-[#7A8275] text-white hover:bg-[#686E64] py-2.5 rounded-xl text-sm font-medium transition shadow-sm hover:shadow active:scale-[0.98]">
+                                存入 / 同步至雲端
+                            </button>
+                            <button type="button" id="btn-cancel-edit" onclick="window.cancelEdit()" class="hidden px-5 bg-[#F0EAE1] text-[#7A8275] hover:bg-[#DFD9CD] py-2.5 rounded-xl text-sm font-medium transition shadow-sm">
+                                取消
+                            </button>
+                        </div>
                     </form>
                 </div>
 
-                <!-- 已登錄卡片列表 -->
-                <div class="space-y-3">
+                <!-- 已登錄卡片列表 (在兩個分頁中都會顯示於下方) -->
+                <div id="list-container" class="space-y-3">
                     <div class="flex items-center justify-between">
                         <h3 class="text-sm font-medium text-[#4E534A] tracking-wide flex items-center">
                             <span class="w-1.5 h-3 bg-[#7A8275] rounded-full mr-1.5"></span>
@@ -212,12 +243,12 @@
             </div>
 
             <!-- 右側：仿真人臉試妝鏡 -->
-            <div class="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
-                <div class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-4 text-center">
+            <div id="mirror-container" class="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
+                <div class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-4 text-center relative">
                     <div class="flex items-center justify-between mb-3 border-b border-[#F0EAE1] pb-2">
                         <h2 class="text-xs font-semibold text-[#4E534A] flex items-center">
                             <svg class="w-4 h-4 mr-1 text-[#7A8275]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                            模擬試妝
+                            虛擬試妝鏡
                         </h2>
                         <button onclick="window.clearMakeup()" class="text-[10px] text-rose-500 hover:underline flex items-center">
                             清空妝容
@@ -287,17 +318,16 @@
                 </div>
 
                 <!-- 手機版指南折疊 -->
-                <details class="bg-white rounded-2xl border border-[#DFD9CD] p-3 shadow-sm text-xs group cursor-pointer" open>
+                <details class="bg-white rounded-2xl border border-[#DFD9CD] p-3 shadow-sm text-xs group cursor-pointer hidden lg:block">
                     <summary class="font-medium text-[#7A8275] flex justify-between items-center select-none">
-                        <span>📱 雲端同步重要檢查清單（手機保存必看）</span>
+                        <span>📱 雲端同步重要檢查清單</span>
                         <span class="text-[10px] text-gray-400 group-open:rotate-180 transition-transform">▼</span>
                     </summary>
                     <div class="mt-3 space-y-2 text-[#7A8275]/90 border-t border-[#F0EAE1] pt-3">
-                        <p class="font-semibold text-rose-500">⚠ 若發現「重整網頁後資料就不見」，請確認以下設定：</p>
                         <ol class="list-decimal pl-4 space-y-1.5 text-[11px]">
-                            <li><strong>開啟匿名認證：</strong> 進入 Firebase Console ➡ Authentication ➡ Sign-in method ➡ 啟用 <strong>「匿名 (Anonymous)」</strong> 登入方式。</li>
-                            <li><strong>設定安全規則：</strong> 進入 Firestore Database ➡ 規則 (Rules) ➡ 將內容修改並發布為：<br><code class="block bg-gray-100 p-1.5 my-1 text-[10px] rounded text-gray-700">allow read, write: if request.auth != null;</code></li>
-                            <li><strong>新增 GitHub 授權網域：</strong> 到 Authentication ➡ 設定 (Settings) ➡ 授權網域 ➡ 新增 <code>您的帳號.github.io</code>（不可帶有 https://）。</li>
+                            <li><strong>開啟匿名認證：</strong> Firebase Console ➡ Authentication ➡ 啟用「匿名」登入。</li>
+                            <li><strong>設定安全規則：</strong> Firestore Database ➡ 規則修改為：<code class="bg-gray-100 p-0.5 rounded">allow read, write: if request.auth != null;</code></li>
+                            <li><strong>新增授權網域：</strong> Authentication ➡ 設定 ➡ 授權網域新增 <code>您的帳號.github.io</code>。</li>
                         </ol>
                     </div>
                 </details>
@@ -320,7 +350,8 @@
     <!-- JavaScript 業務邏輯與 Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        // 新增引入 updateDoc 用於編輯更新功能
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
         // Firebase 應用配置
@@ -338,17 +369,39 @@
         let localData = []; 
         let activeFilter = 'all';
         let currentUploadedImageBase64 = ''; 
+        let editingId = null; // 紀錄目前正在編輯的彩妝 ID
 
         // 初始化狀態與連線
         window.addEventListener('load', () => {
-            loadLocalCache(); // 優先立即載入本地快取，防止畫面空白
+            document.body.classList.add('mobile-mode-form'); // 預設手機版顯示表單列表
+            loadLocalCache(); 
             initAppServices();
             setupInteractiveCanvas();
             setupSliders();
             setupExcelImporter();
         });
 
-        // 初始化 Firebase 雲端與匿名登入
+        // 處理手機版分頁切換
+        window.switchMobileTab = function(tab) {
+            const btnForm = document.getElementById('tab-form');
+            const btnMirror = document.getElementById('tab-mirror');
+            
+            if (tab === 'form') {
+                document.body.classList.remove('mobile-mode-mirror');
+                document.body.classList.add('mobile-mode-form');
+                
+                btnForm.className = "flex-1 py-3 text-[13px] font-bold text-[#7A8275] border-b-[3px] border-[#7A8275] transition";
+                btnMirror.className = "flex-1 py-3 text-[13px] font-medium text-[#A39B8F] border-b-[3px] border-transparent transition hover:text-[#7A8275]";
+            } else {
+                document.body.classList.remove('mobile-mode-form');
+                document.body.classList.add('mobile-mode-mirror');
+                
+                btnMirror.className = "flex-1 py-3 text-[13px] font-bold text-[#7A8275] border-b-[3px] border-[#7A8275] transition";
+                btnForm.className = "flex-1 py-3 text-[13px] font-medium text-[#A39B8F] border-b-[3px] border-transparent transition hover:text-[#7A8275]";
+            }
+        };
+
+        // 初始化 Firebase
         async function initAppServices() {
             const statusDot = document.getElementById('db-status-dot');
             const statusText = document.getElementById('db-status-text');
@@ -358,33 +411,28 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                // 進行匿名認證
                 await signInAnonymously(auth);
                 
                 statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
                 statusText.innerText = "雲端同步中";
                 
-                // 開始實時監聽 Firestore
                 listenToCosmetics();
                 showToast("雲端資料庫連線成功", "success");
             } catch (error) {
                 console.warn("Firebase 連線受阻，切換為「本地儲存模式」:", error);
-                db = null; // 確保 db 標記為 null 進行完美降級
+                db = null; 
                 auth = null;
                 statusDot.className = "w-2 h-2 rounded-full bg-orange-400";
                 statusText.innerText = "本地儲存模式";
-                
                 renderListFromCache();
             }
         }
 
-        // 圖片上傳與滴管 Canvas 處理
         function setupInteractiveCanvas() {
             const imagePicker = document.getElementById('image-picker');
             const eyedropperCanvas = document.getElementById('eyedropper-canvas');
             const uploadPlaceholder = document.getElementById('upload-placeholder');
             const ctx = eyedropperCanvas.getContext('2d');
-
             const colorPreview = document.getElementById('color-preview');
             const colorHex = document.getElementById('color-hex');
             const colorWheel = document.getElementById('color-wheel-picker');
@@ -392,19 +440,16 @@
             imagePicker.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
                         eyedropperCanvas.classList.remove('hidden');
                         uploadPlaceholder.classList.add('hidden');
-
                         const maxW = 320;
                         const scale = maxW / img.width;
                         eyedropperCanvas.width = maxW;
                         eyedropperCanvas.height = img.height * scale;
-
                         ctx.drawImage(img, 0, 0, eyedropperCanvas.width, eyedropperCanvas.height);
                         compressAndStoreImage(img);
                     };
@@ -454,28 +499,21 @@
             return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
         }
 
-        // 監聽/拉取 Firestore 彩妝數據（保護本地資料不被空雲端抹除）
         function listenToCosmetics() {
             if (!db) return;
             const q = query(collection(db, "cosmetics"), orderBy("createdAt", "desc"));
-            
             onSnapshot(q, (snapshot) => {
                 const cloudItems = [];
                 snapshot.forEach((doc) => {
                     cloudItems.push({ id: doc.id, ...doc.data() });
                 });
-
-                // 【核心修復機制】抽取出「本地限定」未成功上傳雲端的資料 (ID 開頭為 local_)
                 const localOnlyItems = localData.filter(item => String(item.id).startsWith('local_'));
-                
-                // 合併雲端與本地資料，避免雲端空白將本地暫存同步清除
                 const merged = [...cloudItems];
                 localOnlyItems.forEach(localItem => {
                     if (!merged.some(cItem => cItem.name === localItem.name && cItem.colorHex === localItem.colorHex)) {
                         merged.push(localItem);
                     }
                 });
-
                 localData = merged;
                 localStorage.setItem('cosmetics_backup', JSON.stringify(merged));
                 renderList();
@@ -497,7 +535,7 @@
             loadLocalCache();
         }
 
-        // 送出表單 (上傳雲端 / 失敗時儲存本地)
+        // 送出表單 (新增 或 更新)
         window.submitCosmeticForm = async function() {
             const name = document.getElementById('itemName').value.trim();
             const brand = document.getElementById('itemBrand').value.trim();
@@ -530,19 +568,38 @@
                 texture,
                 expiry: expiry || "未標記",
                 colorHex: hex,
-                photo: currentUploadedImageBase64 || null,
-                createdAt: new Date().getTime()
+                photo: currentUploadedImageBase64 || null
             };
 
+            // 如果目前是在「編輯」模式
+            if (editingId) {
+                if (db && !String(editingId).startsWith('local_')) {
+                    try {
+                        await updateDoc(doc(db, "cosmetics", editingId), itemPayload);
+                        showToast(`「${name}」資料已更新`, "success");
+                    } catch (e) {
+                        console.error("更新失敗:", e);
+                        showToast("雲端更新失敗，請檢查權限", "error");
+                        updateLocalFallback(editingId, itemPayload);
+                    }
+                } else {
+                    updateLocalFallback(editingId, itemPayload);
+                    showToast(`「${name}」資料已更新(本地)`, "success");
+                }
+                window.cancelEdit(); // 完成後退出編輯模式
+                return;
+            }
+
+            // 新增模式
+            itemPayload.createdAt = new Date().getTime();
             if (db) {
                 try {
-                    // 嘗試寫入雲端
                     await addDoc(collection(db, "cosmetics"), itemPayload);
                     showToast(`「${name}」已同步至 Firebase 雲端`, "success");
                     resetForm();
                 } catch (e) {
-                    console.warn("Firebase 寫入權限遭拒，改存本地瀏覽器暫存:", e);
-                    showToast(`⚠️ 雲端同步失敗（請檢查後台權限），已先安全儲存於本地！`, "error");
+                    console.warn("寫入失敗:", e);
+                    showToast(`⚠️ 雲端同步失敗，已儲存於本地！`, "error");
                     saveToLocalFallback(itemPayload);
                 }
             } else {
@@ -552,138 +609,170 @@
 
         function saveToLocalFallback(payload) {
             payload.id = 'local_' + Date.now();
-            
-            // 避免重複加入
             if (!localData.some(item => item.name === payload.name && item.colorHex === payload.colorHex)) {
                 localData.unshift(payload);
             }
-            
             localStorage.setItem('cosmetics_backup', JSON.stringify(localData));
             renderList();
             resetForm();
         }
 
-        // Excel 批次匯入解析模組 (對齊 test.xlsx)
+        // 單純更新本地陣列資料
+        function updateLocalFallback(id, payload) {
+            const index = localData.findIndex(i => i.id === id);
+            if (index !== -1) {
+                localData[index] = { ...localData[index], ...payload };
+                localStorage.setItem('cosmetics_backup', JSON.stringify(localData));
+                renderList();
+            }
+        }
+
+        // 取消編輯功能
+        window.cancelEdit = function() {
+            editingId = null;
+            resetForm();
+            
+            // UI 狀態還原
+            document.getElementById('form-title').innerHTML = '<svg class="w-4 h-4 mr-1.5 text-[#7A8275]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg> 登記彩妝';
+            document.getElementById('btn-submit-form').innerText = '存入 / 同步至雲端';
+            document.getElementById('btn-submit-form').classList.replace('bg-amber-600', 'bg-[#7A8275]');
+            document.getElementById('btn-submit-form').classList.replace('hover:bg-amber-700', 'hover:bg-[#686E64]');
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            document.getElementById('edit-indicator').classList.add('hidden');
+        };
+
+        // 啟動編輯模式並載入資料
+        window.editCosmeticItem = function(id) {
+            const item = localData.find(i => i.id === id);
+            if (!item) return;
+
+            editingId = id;
+
+            // 填充表單
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemBrand').value = item.brand !== '無品牌' ? item.brand : '';
+            document.getElementById('itemCode').value = item.code !== '標準' ? item.code : '';
+            document.getElementById('itemTone').value = item.tone !== '未註明' ? item.tone : '';
+            document.getElementById('itemTexture').value = item.texture || '啞光霧面';
+            document.getElementById('itemExpiry').value = item.expiry && item.expiry !== '未標記' ? item.expiry : '';
+            
+            // 處理分類 (Checkbox)
+            document.querySelectorAll('input[name="categories"]').forEach(cb => {
+                cb.checked = (item.categories || []).includes(cb.value);
+            });
+
+            // 處理顏色
+            document.getElementById('color-hex').value = item.colorHex;
+            document.getElementById('color-wheel-picker').value = item.colorHex;
+            document.getElementById('color-preview').style.backgroundColor = item.colorHex;
+
+            // 處理圖片 (如果有)
+            currentUploadedImageBase64 = item.photo || '';
+            const canvas = document.getElementById('eyedropper-canvas');
+            const placeholder = document.getElementById('upload-placeholder');
+            
+            if (item.photo) {
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = function() {
+                    canvas.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                    const maxW = 320;
+                    const scale = maxW / img.width;
+                    canvas.width = maxW;
+                    canvas.height = img.height * scale;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                };
+                img.src = item.photo;
+            } else {
+                canvas.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+
+            // UI 狀態更新
+            document.getElementById('form-title').innerHTML = '<svg class="w-4 h-4 mr-1.5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg> 編輯彩妝';
+            document.getElementById('btn-submit-form').innerText = '儲存修改';
+            document.getElementById('btn-submit-form').classList.replace('bg-[#7A8275]', 'bg-amber-600');
+            document.getElementById('btn-submit-form').classList.replace('hover:bg-[#686E64]', 'hover:bg-amber-700');
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            document.getElementById('edit-indicator').classList.remove('hidden');
+
+            // 手機版自動切換回表單分頁，並滾動到頂部
+            if (window.innerWidth < 1024) {
+                window.switchMobileTab('form');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+
         function setupExcelImporter() {
             const filePicker = document.getElementById('excel-file-picker');
-            
             filePicker.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = async function(event) {
                     try {
                         const data = new Uint8Array(event.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
-                        
-                        // 讀取第一個分頁
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        
-                        // 轉換為 JSON 格式
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                         const rawRows = XLSX.utils.sheet_to_json(worksheet);
                         
-                        if (rawRows.length === 0) {
-                            showToast("此 Excel 檔案內沒有找到任何彩妝資料", "error");
-                            return;
-                        }
+                        if (rawRows.length === 0) return showToast("檔案內沒有找到資料", "error");
 
-                        let importCount = 0;
-                        let failCount = 0;
+                        let importCount = 0; let failCount = 0;
 
                         for (const row of rawRows) {
-                            // 模糊對應中文標頭
                             const name = (row['產品名稱'] || row['名稱'] || row['Name'] || '').toString().trim();
-                            
-                            if (!name) {
-                                failCount++;
-                                continue;
-                            }
+                            if (!name) { failCount++; continue; }
 
-                            // 解析多選分類（如："唇膏, 腮紅"、"唇,頰"）
                             const rawCat = (row['產品類別'] || row['類別'] || row['Category'] || '').toString();
                             const categories = [];
                             if (rawCat.includes('唇') || rawCat.toLowerCase().includes('lip')) categories.push('lip');
                             if (rawCat.includes('腮') || rawCat.includes('頰') || rawCat.toLowerCase().includes('cheek')) categories.push('cheek');
                             if (rawCat.includes('眼') || rawCat.toLowerCase().includes('eyeshadow')) categories.push('eyeshadow');
-                            if (categories.length === 0) {
-                                // 預設歸入 lip (唇)
-                                categories.push('lip');
-                            }
+                            if (categories.length === 0) categories.push('lip');
 
                             const brand = (row['品牌'] || row['Brand'] || '無品牌').toString().trim();
                             const code = (row['色號'] || row['Code'] || '標準').toString().trim();
                             const tone = (row['色調類型'] || row['色調'] || row['Tone'] || '未註明').toString().trim();
                             
-                            // 解析質地下拉選單
                             let texture = (row['質地'] || row['Texture'] || '啞光霧面').toString().trim();
-                            const validTextures = ["啞光霧面", "水光玻璃", "絲絨緞光", "金屬閃爍", "輕薄日常"];
-                            if (!validTextures.includes(texture)) {
-                                texture = "啞光霧面"; // 預設容錯
-                            }
+                            if (!["啞光霧面", "水光玻璃", "絲絨緞光", "金屬閃爍", "輕薄日常"].includes(texture)) texture = "啞光霧面";
 
-                            // 處理有效期限 (Excel 的日期格式可能會轉化為數字，需進行容錯)
                             let expiry = (row['有效期限'] || row['效期'] || row['Expiry'] || '').toString().trim();
                             if (/^\d+$/.test(expiry)) {
-                                // Excel 序號日期轉換
-                                const excelDate = parseInt(expiry, 10);
-                                const dateObj = new Date((excelDate - 25569) * 86400 * 1000);
-                                if (!isNaN(dateObj.getTime())) {
-                                    expiry = dateObj.toISOString().split('T')[0];
-                                }
+                                const dateObj = new Date((parseInt(expiry, 10) - 25569) * 86400 * 1000);
+                                if (!isNaN(dateObj.getTime())) expiry = dateObj.toISOString().split('T')[0];
                             }
 
-                            // 解析試色 HEX
                             let colorHex = (row['顏色'] || row['色值'] || row['Hex'] || row['Color'] || '#E17A7A').toString().trim();
-                            if (!colorHex.startsWith('#')) {
-                                colorHex = '#' + colorHex;
-                            }
-                            if (colorHex.length !== 7) {
-                                colorHex = '#E17A7A'; // 無效色值退回預設
-                            }
+                            if (!colorHex.startsWith('#')) colorHex = '#' + colorHex;
+                            if (colorHex.length !== 7) colorHex = '#E17A7A';
 
                             const payload = {
-                                name,
-                                categories,
-                                brand,
-                                code,
-                                tone,
-                                texture,
-                                expiry: expiry || "未標記",
-                                colorHex,
-                                photo: null,
-                                createdAt: new Date().getTime()
+                                name, categories, brand, code, tone, texture, 
+                                expiry: expiry || "未標記", colorHex, photo: null, createdAt: new Date().getTime()
                             };
 
-                            // 上傳雲端或本地備份
                             if (db) {
-                                try {
-                                    await addDoc(collection(db, "cosmetics"), payload);
-                                    importCount++;
-                                } catch (error) {
-                                    saveToLocalFallbackNoAlert(payload);
-                                    importCount++;
-                                }
+                                try { await addDoc(collection(db, "cosmetics"), payload); importCount++; } 
+                                catch (error) { saveToLocalFallbackNoAlert(payload); importCount++; }
                             } else {
-                                saveToLocalFallbackNoAlert(payload);
-                                importCount++;
+                                saveToLocalFallbackNoAlert(payload); importCount++;
                             }
                         }
 
-                        showToast(`📊 匯入完成！成功：${importCount} 筆` + (failCount > 0 ? ` (因無產品名稱略過 ${failCount} 筆)` : ''), "success");
-                        filePicker.value = ''; // 重置 picker
-
+                        showToast(`匯入完成！成功：${importCount} 筆` + (failCount > 0 ? ` (略過 ${failCount} 筆)` : ''), "success");
+                        filePicker.value = ''; 
                     } catch (err) {
-                        console.error("Excel 解析出錯:", err);
-                        showToast("Excel 解析失敗，請確認檔案格式是否正確", "error");
+                        showToast("Excel 解析失敗", "error");
                     }
                 };
                 reader.readAsArrayBuffer(file);
             });
         }
 
-        // 純靜態、不彈窗的本地存儲（Excel 批次儲存防干擾專用）
         function saveToLocalFallbackNoAlert(payload) {
             payload.id = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
             if (!localData.some(item => item.name === payload.name && item.colorHex === payload.colorHex)) {
@@ -693,20 +782,21 @@
             renderList();
         }
 
-        // 刪除化妝品
         window.deleteCosmeticItem = async function(id) {
+            // 確認彈窗
+            if (!confirm("確定要刪除這筆彩妝紀錄嗎？")) return;
+
             if (db && !String(id).startsWith('local_')) {
                 try {
                     await deleteDoc(doc(db, "cosmetics", id));
-                    showToast("已從雲端資料庫刪除", "success");
+                    showToast("已從雲端刪除", "success");
                 } catch (e) {
-                    console.error("雲端刪除失敗:", e);
-                    showToast("無法在雲端刪除，請檢查權限設定", "error");
+                    showToast("無法在雲端刪除，請檢查權限", "error");
                 }
             } else {
                 localData = localData.filter(item => item.id !== id);
                 localStorage.setItem('cosmetics_backup', JSON.stringify(localData));
-                showToast("已從手機本地移除", "success");
+                showToast("已從手機移除", "success");
                 renderList();
             }
         };
@@ -764,17 +854,16 @@
                     return `<span class="px-1.5 py-0.5 rounded-md ${bg} text-[9px] font-semibold">${text}</span>`;
                 }).join(' ');
 
-                // 標記本項目是儲存在雲端還是純手機本地
                 const storageBadge = String(item.id).startsWith('local_')
-                    ? `<span class="px-1 py-0.2 bg-orange-50 text-orange-600 rounded text-[8px] font-semibold scale-90">手機暫存</span>`
-                    : `<span class="px-1 py-0.2 bg-emerald-50 text-emerald-600 rounded text-[8px] font-semibold scale-90">雲端同步</span>`;
+                    ? `<span class="px-1 py-0.2 bg-orange-50 text-orange-600 rounded text-[8px] font-semibold scale-90">手機</span>`
+                    : `<span class="px-1 py-0.2 bg-emerald-50 text-emerald-600 rounded text-[8px] font-semibold scale-90">雲端</span>`;
 
                 const imgTag = item.photo 
                     ? `<img src="${item.photo}" class="w-8 h-8 rounded-lg object-cover border border-[#DFD9CD] shadow-inner flex-shrink-0" alt="色彩相片">`
                     : `<div class="w-8 h-8 rounded-lg bg-[#F9F6F0] border border-[#DFD9CD] flex items-center justify-center text-[9px] text-[#A39B8F] flex-shrink-0">無圖</div>`;
 
                 card.innerHTML = `
-                    <div class="flex items-start space-x-2.5 max-w-[85%] cursor-pointer" onclick="window.applyMakeupToFace('${item.colorHex}', '${item.categories ? item.categories.join(',') : 'lip'}', '${item.name}', '${item.brand}', '${item.code}')">
+                    <div class="flex items-start space-x-2.5 max-w-[82%] cursor-pointer" onclick="window.applyMakeupToFace('${item.colorHex}', '${item.categories ? item.categories.join(',') : 'lip'}', '${item.name}', '${item.brand}', '${item.code}')">
                         <div class="flex flex-col items-center space-y-1">
                             <div class="w-6 h-6 rounded-full border border-white shadow-md flex-shrink-0" style="background-color: ${item.colorHex};"></div>
                             ${imgTag}
@@ -797,9 +886,15 @@
                             </div>
                         </div>
                     </div>
-                    <button onclick="window.deleteCosmeticItem('${item.id}')" class="text-gray-400 hover:text-rose-500 p-1 rounded-full hover:bg-gray-50 transition">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
+                    <!-- 編輯與刪除操作區塊 -->
+                    <div class="flex flex-col space-y-1 items-end">
+                        <button onclick="window.editCosmeticItem('${item.id}')" class="text-[#A39B8F] hover:text-amber-500 p-1.5 rounded-full hover:bg-amber-50 transition" title="編輯">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+                        <button onclick="window.deleteCosmeticItem('${item.id}')" class="text-[#A39B8F] hover:text-rose-500 p-1.5 rounded-full hover:bg-rose-50 transition" title="刪除">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
                 `;
                 container.appendChild(card);
             });
@@ -856,6 +951,11 @@
                 </div>
             `;
             showToast(`已成功試用「${name}」`, "success");
+            
+            // 如果人在手機版的表單分頁中點擊了彩妝，自動跳轉到鏡子頁面讓他看效果
+            if (window.innerWidth < 1024 && document.body.classList.contains('mobile-mode-form')) {
+                window.switchMobileTab('mirror');
+            }
         };
 
         function setupSliders() {
