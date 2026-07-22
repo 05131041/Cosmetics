@@ -37,15 +37,14 @@
         /* 手機版分頁顯示邏輯 */
         @media (max-width: 1023px) {
             body.mobile-mode-form #mirror-container { display: none !important; }
-            body.mobile-mode-mirror #form-container { display: none !important; }
+            body.mobile-mode-mirror #left-column { display: none !important; }
             
-            /* 在試妝模式下，確保鏡子置頂方便點選下方清單試色 */
+            /* 讓試妝鏡在手機版充滿螢幕可用高度，方便捲動下方產品清單 */
             body.mobile-mode-mirror #mirror-container { 
-                position: sticky; 
-                top: 106px; /* 根據 header + tab 高度調整 */
-                z-index: 30; 
-                margin-bottom: 1.5rem;
-                display: block !important;
+                display: flex !important;
+                flex-direction: column;
+                height: calc(100vh - 120px); 
+                margin-bottom: 0;
             }
         }
     </style>
@@ -85,7 +84,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             <!-- 左側/中側：表單與卡片列表 (佔 7 欄) -->
-            <div class="lg:col-span-7 space-y-6">
+            <div id="left-column" class="lg:col-span-7 space-y-6">
                 
                 <!-- 新增/編輯化妝品表單卡片 -->
                 <div id="form-container" class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-5 transition-all relative overflow-hidden">
@@ -243,21 +242,21 @@
             </div>
 
             <!-- 右側：仿真人臉試妝鏡 -->
-            <div id="mirror-container" class="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
-                <div class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-4 text-center relative">
-                    <div class="flex items-center justify-between mb-3 border-b border-[#F0EAE1] pb-2">
+            <div id="mirror-container" class="lg:col-span-5 lg:sticky lg:top-20 flex flex-col lg:max-h-[calc(100vh-100px)]">
+                <div class="bg-white rounded-2xl border border-[#DFD9CD] shadow-sm p-3 text-center relative flex flex-col flex-grow overflow-hidden h-full">
+                    <div class="flex items-center justify-between mb-2 border-b border-[#F0EAE1] pb-2 flex-shrink-0">
                         <h2 class="text-xs font-semibold text-[#4E534A] flex items-center">
                             <svg class="w-4 h-4 mr-1 text-[#7A8275]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                            虛擬試妝鏡
+                            虛擬試妝與調色盤
                         </h2>
-                        <button onclick="window.clearMakeup()" class="text-[10px] text-rose-500 hover:underline flex items-center">
+                        <button onclick="window.clearMakeup()" class="text-[10px] text-rose-500 hover:underline flex items-center bg-rose-50 px-2 py-1 rounded-md">
                             清空妝容
                         </button>
                     </div>
 
                     <!-- SVG 向量人臉 -->
-                    <div class="relative bg-[#F9F6F0]/50 rounded-2xl py-6 flex justify-center items-center overflow-hidden border border-[#F0EAE1]">
-                        <svg id="face-mirror" class="w-60 h-60 max-w-full drop-shadow-md" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <div class="relative bg-[#F9F6F0]/50 rounded-xl py-3 flex justify-center items-center border border-[#F0EAE1] flex-shrink-0">
+                        <svg id="face-mirror" class="w-48 h-48 sm:w-56 sm:h-56 max-w-full drop-shadow-md" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                             <defs>
                                 <filter id="blush-blur" x="-20%" y="-20%" width="140%" height="140%">
                                     <feGaussianBlur stdDeviation="8" />
@@ -266,19 +265,32 @@
                                     <feGaussianBlur stdDeviation="4.5" />
                                 </filter>
                             </defs>
-                            <path d="M75,150 L75,190 C75,190 100,200 125,190 L125,150 Z" fill="#FCE9DB" />
-                            <path d="M70,165 C85,178 115,178 130,165" fill="none" stroke="#E6C6B0" stroke-width="2" stroke-linecap="round"/>
-                            <path d="M55,80 C50,135 68,168 100,168 C132,168 150,135 145,80 C140,40 128,30 100,30 C72,30 60,40 55,80 Z" fill="#FDF3EB" stroke="#F3DEC2" stroke-width="0.5" />
-                            <ellipse cx="51" cy="95" rx="5" ry="9" fill="#FCE9DB" />
-                            <ellipse cx="149" cy="95" rx="5" ry="9" fill="#FCE9DB" />
-                            <path d="M54,80 C50,55 70,25 100,25 C130,25 150,55 146,80 C144,70 140,50 125,40 C110,32 90,32 75,40 C60,50 56,70 54,80 Z" fill="#696D65" />
-                            <path d="M72,68 C78,63 84,63 90,66" fill="none" stroke="#555A51" stroke-width="1.8" stroke-linecap="round" />
-                            <path d="M128,68 C122,63 116,63 110,66" fill="none" stroke="#555A51" stroke-width="1.8" stroke-linecap="round" />
-                            <path d="M74,77 C78,74 84,74 88,77" fill="none" stroke="#4E534A" stroke-width="1.5" stroke-linecap="round" />
-                            <path d="M126,77 C122,74 116,74 112,77" fill="none" stroke="#4E534A" stroke-width="1.5" stroke-linecap="round" />
-                            <path d="M75,79 C78,81 84,81 87,79" fill="none" stroke="#4E534A" stroke-width="1" stroke-linecap="round" />
-                            <path d="M125,79 C122,81 116,81 113,79" fill="none" stroke="#4E534A" stroke-width="1" stroke-linecap="round" />
-                            <path d="M100,75 L100,116 C100,118 97,120 96,120 C95,120 94,119 94,118" fill="none" stroke="#E6C6B0" stroke-width="1.5" stroke-linecap="round" />
+                            
+                            <!-- 後景：中長髮尾 (底層，暖棕色) -->
+                            <path d="M 40,75 C 35,130 35,180 38,200 C 60,205 140,205 162,200 C 165,180 165,130 160,75 C 160,30 130,10 100,10 C 70,10 40,30 40,75 Z" fill="#69412B" />
+                            
+                            <!-- 脖子 (柔春陰影色) -->
+                            <path d="M75,150 L75,190 C75,190 100,200 125,190 L125,150 Z" fill="#F2CCB6" />
+                            <!-- 下巴陰影 -->
+                            <path d="M70,165 C85,178 115,178 130,165" fill="none" stroke="#E3B89E" stroke-width="2" stroke-linecap="round"/>
+                            
+                            <!-- 耳朵 -->
+                            <ellipse cx="51" cy="95" rx="5" ry="9" fill="#F2CCB6" />
+                            <ellipse cx="149" cy="95" rx="5" ry="9" fill="#F2CCB6" />
+                            
+                            <!-- 臉部基底 (柔春色調 - 暖蜜桃/象牙白) -->
+                            <path d="M55,80 C50,135 68,168 100,168 C132,168 150,135 145,80 C140,40 128,30 100,30 C72,30 60,40 55,80 Z" fill="#FAE1D2" stroke="#F0CDB6" stroke-width="0.5" />
+                            
+                            <!-- 眼睛與眉毛 (稍微改為柔和棕色) -->
+                            <path d="M72,68 C78,63 84,63 90,66" fill="none" stroke="#7A5B49" stroke-width="1.8" stroke-linecap="round" />
+                            <path d="M128,68 C122,63 116,63 110,66" fill="none" stroke="#7A5B49" stroke-width="1.8" stroke-linecap="round" />
+                            <path d="M74,77 C78,74 84,74 88,77" fill="none" stroke="#6B4D3C" stroke-width="1.5" stroke-linecap="round" />
+                            <path d="M126,77 C122,74 116,74 112,77" fill="none" stroke="#6B4D3C" stroke-width="1.5" stroke-linecap="round" />
+                            <path d="M75,79 C78,81 84,81 87,79" fill="none" stroke="#6B4D3C" stroke-width="1" stroke-linecap="round" />
+                            <path d="M125,79 C122,81 116,81 113,79" fill="none" stroke="#6B4D3C" stroke-width="1" stroke-linecap="round" />
+                            
+                            <!-- 鼻子 -->
+                            <path d="M100,75 L100,116 C100,118 97,120 96,120 C95,120 94,119 94,118" fill="none" stroke="#E3B89E" stroke-width="1.5" stroke-linecap="round" />
 
                             <!-- 妝容圖層 -->
                             <path id="makeup-eyeshadow-l" d="M 68,75 C 75,64 85,64 92,75 Z" fill="none" opacity="0" filter="url(#eyeshadow-blur)" class="transition-all duration-300" />
@@ -287,33 +299,77 @@
                             <circle id="makeup-blush-r" cx="128" cy="116" r="14" fill="none" opacity="0" filter="url(#blush-blur)" class="transition-all duration-300" />
                             <path id="makeup-lip" d="M 86,136 C 92,131 96,133 100,135 C 104,133 108,131 114,136 C 109,144 91,144 86,136 Z" fill="none" opacity="0" class="transition-all duration-300" />
                             <ellipse id="makeup-lip-gloss" cx="100" cy="138" rx="8" ry="1.5" fill="#FFFFFF" opacity="0" class="transition-all duration-300 pointer-events-none" />
+
+                            <!-- 前景：八字瀏海 -->
+                            <!-- 左側瀏海 -->
+                            <path d="M 100,12 C 70,12 40,30 38,90 C 36,130 42,170 52,195 C 46,150 48,110 60,85 C 70,65 85,45 100,45 Z" fill="#82553B" />
+                            <!-- 右側瀏海 -->
+                            <path d="M 100,12 C 130,12 160,30 162,90 C 164,130 158,170 148,195 C 154,150 152,110 140,85 C 130,65 115,45 100,45 Z" fill="#82553B" />
+                            <!-- 髮絲光澤紋理 -->
+                            <path d="M 90,20 C 65,30 52,60 50,110" fill="none" stroke="#9A6B50" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+                            <path d="M 110,20 C 135,30 148,60 150,110" fill="none" stroke="#9A6B50" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+                            <path d="M 100,15 C 96,25 93,35 90,42 M 100,15 C 104,25 107,35 110,42" stroke="#69412B" stroke-width="1.5" fill="none" opacity="0.4" stroke-linecap="round"/>
+
+                            <!-- 互動點擊區 (隱形外框，用於點擊) -->
+                            <g class="cursor-pointer" onclick="window.selectFacePart('eyeshadow')">
+                                <rect x="40" y="55" width="120" height="35" fill="transparent" />
+                            </g>
+                            <g class="cursor-pointer" onclick="window.selectFacePart('cheek')">
+                                <rect x="40" y="95" width="120" height="35" fill="transparent" />
+                            </g>
+                            <g class="cursor-pointer" onclick="window.selectFacePart('lip')">
+                                <rect x="60" y="130" width="80" height="30" fill="transparent" />
+                            </g>
                         </svg>
                         <div id="trial-active-badge" class="hidden absolute top-2 right-2 bg-[#7A8275] text-white text-[9px] px-2 py-0.5 rounded-full font-mono shadow-sm">
                             TRIALING
                         </div>
                     </div>
 
+                    <!-- 部位選擇器 -->
+                    <div class="flex justify-center space-x-2 mt-3 flex-shrink-0">
+                        <button id="part-btn-eyeshadow" onclick="window.selectFacePart('eyeshadow')" class="part-selector px-2 sm:px-3 py-1.5 rounded-xl text-xs font-medium border border-[#DFD9CD] text-[#A39B8F] hover:bg-[#F9F6F0] transition flex-1">👁️ 眼部</button>
+                        <button id="part-btn-cheek" onclick="window.selectFacePart('cheek')" class="part-selector px-2 sm:px-3 py-1.5 rounded-xl text-xs font-medium border border-[#DFD9CD] text-[#A39B8F] hover:bg-[#F9F6F0] transition flex-1">☺️ 雙頰</button>
+                        <button id="part-btn-lip" onclick="window.selectFacePart('lip')" class="part-selector px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold border-2 border-[#7A8275] bg-[#7A8275]/10 text-[#7A8275] transition flex-1 scale-105 shadow-sm">💋 唇彩</button>
+                    </div>
+
+                    <!-- 專屬調色盤：列出產品 -->
+                    <div class="mt-3 flex flex-col flex-grow min-h-[120px] bg-[#F9F6F0] rounded-xl p-2 border border-[#F0EAE1]">
+                        <div class="flex justify-between items-center mb-2 flex-shrink-0 px-1">
+                            <span class="text-[11px] font-semibold text-[#7A8275]">點選產品上色</span>
+                            <select id="mirror-filter" onchange="window.renderMirrorPalette()" class="text-[10px] border border-[#DFD9CD] bg-white text-[#7A8275] rounded p-1 outline-none">
+                                <option value="all">顯示全部</option>
+                                <option value="lip">唇彩類</option>
+                                <option value="cheek">頰彩類</option>
+                                <option value="eyeshadow">眼影類</option>
+                            </select>
+                        </div>
+                        <div id="mirror-palette-list" class="grid grid-cols-4 sm:grid-cols-5 gap-2 overflow-y-auto content-start flex-grow px-1 pb-2">
+                            <!-- 動態插入產品色塊 -->
+                        </div>
+                    </div>
+
                     <!-- 試妝微調面板 -->
-                    <div class="mt-4 space-y-3 text-left bg-[#F9F6F0] p-3 rounded-xl border border-[#F0EAE1]">
-                        <h4 class="text-[11px] font-semibold text-[#7A8275] uppercase tracking-wider">妝效微調選項</h4>
+                    <div class="mt-3 space-y-2 text-left bg-white p-2.5 rounded-xl border border-[#F0EAE1] flex-shrink-0 shadow-sm">
+                        <h4 id="tuning-title" class="text-[10px] font-semibold text-[#7A8275] uppercase tracking-wider mb-1">局部妝效微調 (唇彩)</h4>
                         <div>
-                            <div class="flex justify-between text-[11px] text-[#7A8275] mb-1">
+                            <div class="flex justify-between text-[10px] text-[#A39B8F] mb-1">
                                 <span>顯色強度 (濃度)</span>
                                 <span id="opacity-val">65%</span>
                             </div>
                             <input type="range" id="slider-opacity" min="10" max="100" value="65" class="w-full accent-[#7A8275] bg-[#DFD9CD] h-1 rounded-lg appearance-none cursor-pointer">
                         </div>
-                        <div>
-                            <div class="flex justify-between text-[11px] text-[#7A8275] mb-1">
-                                <span>水光玻璃光澤 (僅限唇部)</span>
+                        <div id="gloss-control-group">
+                            <div class="flex justify-between text-[10px] text-[#A39B8F] mb-1">
+                                <span>水光玻璃光澤</span>
                                 <span id="gloss-val">關閉</span>
                             </div>
                             <input type="range" id="slider-gloss" min="0" max="100" value="0" class="w-full accent-[#7A8275] bg-[#DFD9CD] h-1 rounded-lg appearance-none cursor-pointer">
                         </div>
                     </div>
 
-                    <div id="makeup-info-box" class="mt-3 text-center text-xs text-[#7A8275]/80 bg-white border border-[#DFD9CD] py-2 px-3 rounded-lg min-h-[40px] flex items-center justify-center">
-                        點選下方儲存的卡片一鍵試妝
+                    <div id="makeup-info-box" class="mt-2 text-left text-xs text-[#7A8275] bg-white border border-[#DFD9CD] py-1.5 px-3 rounded-lg flex-shrink-0 flex items-center justify-center min-h-[40px]">
+                        尚未選擇產品，請點擊上方調色盤
                     </div>
                 </div>
 
@@ -370,6 +426,7 @@
         let activeFilter = 'all';
         let currentUploadedImageBase64 = ''; 
         let editingId = null; // 紀錄目前正在編輯的彩妝 ID
+        let activeFacePart = 'lip'; // 紀錄試妝鏡目前選擇的部位
 
         // 初始化狀態與連線
         window.addEventListener('load', () => {
@@ -838,6 +895,7 @@
                         此分類目前沒有收藏
                     </div>
                 `;
+                window.renderMirrorPalette(); // 同步更新鏡子內清單
                 return;
             }
 
@@ -898,18 +956,145 @@
                 `;
                 container.appendChild(card);
             });
+            
+            // 每次列表更新，連帶更新試妝鏡的專屬調色盤
+            window.renderMirrorPalette();
         }
 
-        // 試妝鏡互動邏輯
+        // 試妝鏡互動邏輯 (新增部位選擇與指定上色功能)
         let currentMakeupState = {
-            lip: { color: '', active: false },
-            cheek: { color: '', active: false },
-            eyeshadow: { color: '', active: false }
+            lip: { color: '', active: false, opacity: 0.65, gloss: 0 },
+            cheek: { color: '', active: false, opacity: 0.65 },
+            eyeshadow: { color: '', active: false, opacity: 0.65 }
         };
 
+        // 切換試妝部位
+        window.selectFacePart = function(part) {
+            activeFacePart = part;
+            
+            // 重置所有按鈕樣式
+            ['eyeshadow', 'cheek', 'lip'].forEach(p => {
+                const btn = document.getElementById(`part-btn-${p}`);
+                if (btn) btn.className = "part-selector px-2 sm:px-3 py-1.5 rounded-xl text-xs font-medium border border-[#DFD9CD] text-[#A39B8F] hover:bg-[#F9F6F0] transition flex-1";
+            });
+            
+            // 突顯當前啟用的部位按鈕
+            const activeBtn = document.getElementById(`part-btn-${part}`);
+            if (activeBtn) activeBtn.className = "part-selector px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold border-2 border-[#7A8275] bg-[#7A8275]/10 text-[#7A8275] transition flex-1 scale-105 shadow-sm";
+
+            // 自動連動試妝鏡下方的小調色盤分類
+            const mirrorFilter = document.getElementById('mirror-filter');
+            if (mirrorFilter && ['lip', 'cheek', 'eyeshadow'].includes(part)) {
+                mirrorFilter.value = part;
+                window.renderMirrorPalette(); // 同步更新下方調色盤
+            }
+
+            // 更新局部微調面板 UI
+            const tuningTitle = document.getElementById('tuning-title');
+            const glossGroup = document.getElementById('gloss-control-group');
+            const sliderOpacity = document.getElementById('slider-opacity');
+            const opacityVal = document.getElementById('opacity-val');
+
+            const partNames = { lip: '唇彩', cheek: '雙頰', eyeshadow: '眼影' };
+            if (tuningTitle) tuningTitle.innerText = `局部妝效微調 (${partNames[part]})`;
+
+            const currentOpacity = Math.round(currentMakeupState[part].opacity * 100);
+            sliderOpacity.value = currentOpacity;
+            opacityVal.innerText = currentOpacity + '%';
+
+            if (part === 'lip') {
+                glossGroup.classList.remove('hidden');
+                const sliderGloss = document.getElementById('slider-gloss');
+                sliderGloss.value = currentMakeupState.lip.gloss;
+                document.getElementById('gloss-val').innerText = currentMakeupState.lip.gloss === 0 ? '關閉' : currentMakeupState.lip.gloss + '%';
+            } else {
+                glossGroup.classList.add('hidden');
+            }
+        };
+
+        // 渲染試妝鏡內專屬的微型調色盤
+        window.renderMirrorPalette = function() {
+            const container = document.getElementById('mirror-palette-list');
+            if (!container) return;
+            const filter = document.getElementById('mirror-filter').value;
+            
+            container.innerHTML = '';
+            
+            const filtered = localData.filter(item => {
+                if (filter === 'all') return true;
+                return item.categories && item.categories.includes(filter);
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="col-span-full py-6 text-center text-[10px] text-[#A39B8F]">無此分類彩妝</div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const btn = document.createElement('button');
+                btn.onclick = () => window.applyToSelectedPart(item.colorHex, item.name, item.brand, item.code);
+                btn.className = "flex flex-col items-center space-y-1 group p-1 focus:outline-none";
+                
+                const imgHtml = item.photo ? `<img src="${item.photo}" class="absolute inset-0 w-full h-full object-cover rounded-full opacity-0 group-hover:opacity-100 transition duration-300" />` : '';
+                
+                btn.innerHTML = `
+                    <div class="w-10 h-10 rounded-full border-2 border-[#DFD9CD] shadow-sm group-hover:border-[#7A8275] group-hover:scale-110 active:scale-95 transition-all relative overflow-hidden flex items-center justify-center flex-shrink-0" style="background-color: ${item.colorHex}">
+                        ${imgHtml}
+                    </div>
+                    <span class="text-[9px] text-[#7A8275] w-full truncate text-center leading-tight px-0.5">${item.name}</span>
+                `;
+                container.appendChild(btn);
+            });
+        };
+
+        // 從調色盤上色 (精準塗抹在選擇的部位)
+        window.applyToSelectedPart = function(color, name, brand, code) {
+            const opacity = currentMakeupState[activeFacePart].opacity;
+            const badge = document.getElementById('trial-active-badge');
+            badge.classList.remove('hidden');
+
+            if (activeFacePart === 'lip') {
+                document.getElementById('makeup-lip').setAttribute('fill', color);
+                document.getElementById('makeup-lip').setAttribute('opacity', opacity);
+                currentMakeupState.lip.color = color;
+                currentMakeupState.lip.active = true;
+                updateGlossEffect();
+            } else if (activeFacePart === 'cheek') {
+                document.getElementById('makeup-blush-l').setAttribute('fill', color);
+                document.getElementById('makeup-blush-r').setAttribute('fill', color);
+                document.getElementById('makeup-blush-l').setAttribute('opacity', opacity * 0.7);
+                document.getElementById('makeup-blush-r').setAttribute('opacity', opacity * 0.7);
+                currentMakeupState.cheek.color = color;
+                currentMakeupState.cheek.active = true;
+            } else if (activeFacePart === 'eyeshadow') {
+                document.getElementById('makeup-eyeshadow-l').setAttribute('fill', color);
+                document.getElementById('makeup-eyeshadow-r').setAttribute('fill', color);
+                document.getElementById('makeup-eyeshadow-l').setAttribute('opacity', opacity * 0.8);
+                document.getElementById('makeup-eyeshadow-r').setAttribute('opacity', opacity * 0.8);
+                currentMakeupState.eyeshadow.color = color;
+                currentMakeupState.eyeshadow.active = true;
+            }
+
+            const partName = activeFacePart === 'lip' ? '唇部' : (activeFacePart === 'cheek' ? '雙頰' : '眼部');
+            
+            document.getElementById('makeup-info-box').innerHTML = `
+                <div class="w-full text-left flex items-center space-x-2.5">
+                    <div class="w-7 h-7 rounded border border-gray-200 flex-shrink-0 shadow-sm" style="background-color: ${color}"></div>
+                    <div class="flex-1 overflow-hidden">
+                        <div class="flex justify-between items-center mb-0.5">
+                            <span class="text-[11px] font-bold text-[#4E534A] truncate pr-2">${name}</span>
+                            <span class="text-[9px] bg-[#F0EAE1] text-[#7A8275] px-1.5 py-0.5 rounded font-medium flex-shrink-0">用在${partName}</span>
+                        </div>
+                        <div class="text-[#A39B8F] text-[9px] truncate">${brand} • ${code}</div>
+                    </div>
+                </div>
+            `;
+            showToast(`已將顏色塗抹於${partName}`, "success");
+        };
+
+        // 保留原有的套用功能，用於左側清單點擊時的快速預覽
         window.applyMakeupToFace = function(color, categoryString, name, brand, code) {
             const categories = categoryString.split(',');
-            const opacity = document.getElementById('slider-opacity').value / 100;
             const badge = document.getElementById('trial-active-badge');
             const infoBox = document.getElementById('makeup-info-box');
 
@@ -917,29 +1102,35 @@
 
             categories.forEach(cat => {
                 if (cat === 'lip') {
+                    const opacity = currentMakeupState.lip.opacity;
                     const lipPath = document.getElementById('makeup-lip');
                     lipPath.setAttribute('fill', color);
                     lipPath.setAttribute('opacity', opacity);
-                    currentMakeupState.lip = { color, active: true };
+                    currentMakeupState.lip.color = color;
+                    currentMakeupState.lip.active = true;
                     updateGlossEffect();
                 }
                 if (cat === 'cheek') {
+                    const opacity = currentMakeupState.cheek.opacity;
                     const cheekL = document.getElementById('makeup-blush-l');
                     const cheekR = document.getElementById('makeup-blush-r');
                     cheekL.setAttribute('fill', color);
                     cheekR.setAttribute('fill', color);
                     cheekL.setAttribute('opacity', opacity * 0.7);
                     cheekR.setAttribute('opacity', opacity * 0.7);
-                    currentMakeupState.cheek = { color, active: true };
+                    currentMakeupState.cheek.color = color;
+                    currentMakeupState.cheek.active = true;
                 }
                 if (cat === 'eyeshadow') {
+                    const opacity = currentMakeupState.eyeshadow.opacity;
                     const eyeL = document.getElementById('makeup-eyeshadow-l');
                     const eyeR = document.getElementById('makeup-eyeshadow-r');
                     eyeL.setAttribute('fill', color);
                     eyeR.setAttribute('fill', color);
                     eyeL.setAttribute('opacity', opacity * 0.8);
                     eyeR.setAttribute('opacity', opacity * 0.8);
-                    currentMakeupState.eyeshadow = { color, active: true };
+                    currentMakeupState.eyeshadow.color = color;
+                    currentMakeupState.eyeshadow.active = true;
                 }
             });
 
@@ -969,29 +1160,36 @@
                 opacityVal.innerText = val + '%';
                 const opacity = val / 100;
                 
-                if (currentMakeupState.lip.active) document.getElementById('makeup-lip').setAttribute('opacity', opacity);
-                if (currentMakeupState.cheek.active) {
+                // 僅更新目前選擇部位的狀態
+                currentMakeupState[activeFacePart].opacity = opacity;
+                
+                // 僅重新渲染目前選擇的部位
+                if (activeFacePart === 'lip' && currentMakeupState.lip.active) {
+                    document.getElementById('makeup-lip').setAttribute('opacity', opacity);
+                }
+                if (activeFacePart === 'cheek' && currentMakeupState.cheek.active) {
                     document.getElementById('makeup-blush-l').setAttribute('opacity', opacity * 0.7);
                     document.getElementById('makeup-blush-r').setAttribute('opacity', opacity * 0.7);
                 }
-                if (currentMakeupState.eyeshadow.active) {
+                if (activeFacePart === 'eyeshadow' && currentMakeupState.eyeshadow.active) {
                     document.getElementById('makeup-eyeshadow-l').setAttribute('opacity', opacity * 0.8);
                     document.getElementById('makeup-eyeshadow-r').setAttribute('opacity', opacity * 0.8);
                 }
             });
 
             sliderGloss.addEventListener('input', (e) => {
-                const val = e.target.value;
-                glossVal.innerText = val === '0' ? '關閉' : val + '%';
+                const val = parseInt(e.target.value);
+                glossVal.innerText = val === 0 ? '關閉' : val + '%';
+                currentMakeupState.lip.gloss = val;
                 updateGlossEffect();
             });
         }
 
         function updateGlossEffect() {
-            const glossSliderValue = document.getElementById('slider-gloss').value;
+            const glossValue = currentMakeupState.lip.gloss;
             const lipGloss = document.getElementById('makeup-lip-gloss');
-            if (currentMakeupState.lip.active && glossSliderValue > 0) {
-                lipGloss.setAttribute('opacity', (glossSliderValue / 100) * 0.85);
+            if (currentMakeupState.lip.active && glossValue > 0) {
+                lipGloss.setAttribute('opacity', (glossValue / 100) * 0.85);
             } else {
                 lipGloss.setAttribute('opacity', 0);
             }
@@ -1006,13 +1204,16 @@
             document.getElementById('makeup-eyeshadow-r').setAttribute('opacity', 0);
 
             currentMakeupState = {
-                lip: { color: '', active: false },
-                cheek: { color: '', active: false },
-                eyeshadow: { color: '', active: false }
+                lip: { color: '', active: false, opacity: 0.65, gloss: 0 },
+                cheek: { color: '', active: false, opacity: 0.65 },
+                eyeshadow: { color: '', active: false, opacity: 0.65 }
             };
+            
+            // 重置 Slider UI 狀態
+            window.selectFacePart(activeFacePart);
 
             document.getElementById('trial-active-badge').classList.add('hidden');
-            document.getElementById('makeup-info-box').innerText = '點選下方儲存的卡片一鍵試妝';
+            document.getElementById('makeup-info-box').innerHTML = '尚未選擇產品，請點擊上方調色盤';
             showToast("已清空妝容", "success");
         };
 
